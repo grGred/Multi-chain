@@ -1,0 +1,26 @@
+[executor]
+# since we don't want the executor to execute messages that are not sent by our
+# SimpleBatchTransfer contract, the following items are added to filter only
+# the ones we care about
+[[executor.contracts]]
+chainid = 5 # Goerli
+address = "<SimpleBatchTransfer-address>"
+[[executor.contracts]]
+chainid = 97 # Bsc testnet
+address = "<SimpleBatchTransfer-address>"
+
+[sgnd]
+# SGN testnet node0 grpc. executor reads available messages from this endpoint
+sgn_grpc = "35.165.81.166:9090" 
+# SGN testnet gateway grpc. all tx operations to the SGN is delegated through 
+# a gateway in this test phase
+gateway_grpc = "35.165.81.166:20000" 
+
+[eth]
+# Fully qualified absolute path only, "~" would not work
+signer_keystore = "/Users/patrickmao/.executor/eth-ks/signer.json"
+signer_passphrase = "<your-keystore-passphrase>"
+
+[db]
+url = "localhost:26257"
+
