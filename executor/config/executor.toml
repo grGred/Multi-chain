@@ -4,10 +4,10 @@
 # the ones we care about
 [[executor.contracts]]
 chainid = 5 # Goerli
-address = "<SimpleBatchTransfer-address>"
+address = "0x96C8a3cad47D0249cF20dD5C6B0Fa0c711a310f5"
 [[executor.contracts]]
 chainid = 97 # Bsc testnet
-address = "<SimpleBatchTransfer-address>"
+address = "0xD3F24401591C9e205A938288280C65Da7e5E74f0"
 
 [sgnd]
 # SGN testnet node0 grpc. executor reads available messages from this endpoint
@@ -18,9 +18,8 @@ gateway_grpc = "35.165.81.166:20000"
 
 [eth]
 # Fully qualified absolute path only, "~" would not work
-signer_keystore = "/Users/patrickmao/.executor/eth-ks/signer.json"
-signer_passphrase = "<your-keystore-passphrase>"
+signer_keystore = "/home/grgred/.ethereum/keystore/UTC--2022-03-04T13-14-25.518462100Z--e56d03125836bebd58f7db772efd721da79575c5"
+signer_passphrase = "1111"
 
 [db]
 url = "localhost:26257"
-

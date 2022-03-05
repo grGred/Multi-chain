@@ -1,7 +1,7 @@
 [[multichain]]
 chainID = 5
 name = "Goerli"
-gateway = "<your-goerli-rpc>" # fill in your Goerli rpc provider url
+gateway = "https://goerli.infura.io/v3/b44c0379c63b443cb6021964cec0481f" # fill in your Goerli rpc provider url
 # cBridge (liquidity bridge) contract address. Executor relies on events from this
 # contract to double check and make sure funds are transfered to the destination
 # before it attempts messages on the destination chain
