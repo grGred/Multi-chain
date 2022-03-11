@@ -60,11 +60,13 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
     event SwapRequestSent(bytes32 id, uint64 dstChainId, uint256 srcAmount, address srcToken, address dstToken);
     event SwapRequestDone(bytes32 id, uint256 dstAmount, SwapStatus status);
 
-    mapping(address => uint256) public minSwapAmounts;
     mapping(address => bool) supportedDex;
 
     // erc20 wrap of gas token of this chain, eg. WETH
     address public nativeWrap;
+
+    uint256 public minSwapAmount;
+    uint256 public feeRubic; // 1m is 100%
 
     constructor(
         address _messageBus,
@@ -74,6 +76,8 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
         messageBus = _messageBus;
         supportedDex[_supportedDex] = true;
         nativeWrap = _nativeWrap;
+        minSwapAmount = 10 ether;
+        feeRubic = 160000; // 0.16%
     }
 
     function transferWithSwapNative(
@@ -102,6 +106,7 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
         );
     }
 
+    // you cant recive native from not native token
     function transferWithSwap(
         address _receiver,
         uint256 _amountIn,
@@ -109,7 +114,8 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
         SwapInfo calldata _srcSwap,
         SwapInfo calldata _dstSwap,
         uint32 _maxBridgeSlippage,
-        uint64 _nonce
+        uint64 _nonce,
+        bool _nativeOut
     ) external payable onlyEOA {
         IERC20(_srcSwap.path[0]).safeTransferFrom(msg.sender, address(this), _amountIn);
         _transferWithSwap(
@@ -120,7 +126,7 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
             _dstSwap,
             _maxBridgeSlippage,
             _nonce,
-            false,
+            _nativeOut,
             msg.value
         );
     }
@@ -153,7 +159,6 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
         require(_srcSwap.path.length > 0, "empty src swap path");
         address srcTokenOut = _srcSwap.path[_srcSwap.path.length - 1];
 
-        require(_amountIn > minSwapAmounts[_srcSwap.path[0]], "amount must be greater than min swap amount");
         uint64 chainId = uint64(block.chainid);
         require(_srcSwap.path.length > 1 || _dstChainId != chainId, "noop is not allowed"); // revert early to save gas
 
@@ -165,6 +170,8 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
             (ok, srcAmtOut) = _trySwap(_srcSwap, _amountIn);
             if (!ok) revert("src swap failed");
         }
+
+        require(srcAmtOut >= minSwapAmount, "amount must be greater than min swap amount");
 
         if (_dstChainId == chainId) {
             _directSend(_receiver, _amountIn, chainId, _srcSwap, _nonce, srcTokenOut, srcAmtOut);
@@ -227,7 +234,7 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
         sendMessageWithTransfer(
             _receiver,
             srcTokenOut,
-            srcAmtOut,
+            srcAmtOut * (1 - feeRubic / 1000000),
             _dstChainId,
             _nonce,
             _maxBridgeSlippage,
@@ -297,6 +304,7 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
     ) external payable override onlyMessageBus returns (bool) {
         SwapRequest memory m = abi.decode((_message), (SwapRequest));
         bytes32 id = _computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
+        // IERC20(_swap.path[0])
         emit SwapRequestDone(id, 0, SwapStatus.Failed);
         // always return false to mark this transfer as failed since if this function is called then there nothing more
         // we can do in this app as the swap failures are already handled in executeMessageWithTransfer
@@ -353,8 +361,13 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
         return keccak256(abi.encodePacked(_sender, _srcChainId, _dstChainId, _message));
     }
 
-    function setMinSwapAmount(address _token, uint256 _minSwapAmount) external onlyOwner {
-        minSwapAmounts[_token] = _minSwapAmount;
+    function setMinSwapAmount(uint256 _minSwapAmount) external onlyOwner {
+        minSwapAmount = _minSwapAmount;
+    }
+
+    function setRubicFee(uint256 _feeRubic) external onlyOwner {
+        require(_feeRubic < 5000000);
+        feeRubic = _feeRubic;
     }
 
     function setSupportedDex(address _dex, bool _enabled) external onlyOwner {
