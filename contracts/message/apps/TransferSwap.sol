@@ -76,7 +76,7 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
         messageBus = _messageBus;
         supportedDex[_supportedDex] = true;
         nativeWrap = _nativeWrap;
-        minSwapAmount = 10 ether;
+        minSwapAmount = 10 ether; // * decimals which are changeable
         feeRubic = 160000; // 0.16%
     }
 
@@ -296,19 +296,29 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
      * @param _message SwapRequest message that defines the swap behavior on this destination chain
      */
     function executeMessageWithTransferFallback(
-        address, // _sender
-        address, // _token
-        uint256, // _amount
+        address, // _sender (executor)
+        address _token, // _token
+        uint256 _amount, // _amount
         uint64 _srcChainId,
         bytes memory _message
     ) external payable override onlyMessageBus returns (bool) {
         SwapRequest memory m = abi.decode((_message), (SwapRequest));
         bytes32 id = _computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
-        // IERC20(_swap.path[0])
+        IERC20(_token).safeTransfer(m.receiver, _amount);
         emit SwapRequestDone(id, 0, SwapStatus.Failed);
         // always return false to mark this transfer as failed since if this function is called then there nothing more
         // we can do in this app as the swap failures are already handled in executeMessageWithTransfer
         return false;
+    }
+
+    function executeMessageWithTransferRefund(
+        address _token,
+        uint256 _amount,
+        bytes calldata _message
+    ) external payable override onlyMessageBus returns (bool) {
+        SwapRequest memory m = abi.decode((_message), (SwapRequest));
+        IERC20(_token).safeTransfer(m.receiver, _amount);
+        return true;
     }
 
     function sweepTokens(IERC20 token) external onlyOwner {
