@@ -27,6 +27,7 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
         address dex; // the DEX to use for the swap
         uint256 deadline; // deadline for the swap
         uint256 minRecvAmt; // minimum receive amount for the swap
+        SwapVersion version;
     }
 
     struct SwapRequest {
@@ -48,6 +49,12 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
         Fallback
     }
 
+    enum SwapVersion {
+        inch,
+        v2,
+        v3
+    }
+
     // emitted when requested dstChainId == srcChainId, no bridging
     event DirectSwap(
         bytes32 id,
@@ -61,12 +68,14 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
     event SwapRequestDone(bytes32 id, uint256 dstAmount, SwapStatus status);
 
     mapping(address => bool) supportedDex;
+    mapping(uint64 => uint256) dstCryptoFee;
 
     // erc20 wrap of gas token of this chain, eg. WETH
     address public nativeWrap;
 
     uint256 public minSwapAmount;
     uint256 public feeRubic; // 1m is 100%
+    uint8 public decimals = 18;
 
     constructor(
         address _messageBus,
@@ -76,7 +85,8 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
         messageBus = _messageBus;
         supportedDex[_supportedDex] = true;
         nativeWrap = _nativeWrap;
-        minSwapAmount = 10 ether; // * decimals which are changeable
+        dstCryptoFee[43114] = 10000000;
+        minSwapAmount = 8 * 10**decimals; // * decimals which are changeable
         feeRubic = 160000; // 0.16%
     }
 
@@ -90,8 +100,8 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
         uint64 _nonce,
         bool _nativeOut
     ) external payable onlyEOA {
-        require(msg.value >= _amountIn, "Amount insufficient");
         require(_srcSwap.path[0] == nativeWrap, "token mismatch");
+        require(msg.value >= _amountIn, "Amount insufficient");
         IWETH(nativeWrap).deposit{value: _amountIn}();
         _transferWithSwap(
             _receiver,
@@ -231,6 +241,30 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
         // bridge the intermediate token to destination chain along with the message
         // NOTE In production, it's better use a per-user per-transaction nonce so that it's less likely transferId collision
         // would happen at Bridge contract. Currently this nonce is a timestamp supplied by frontend
+        _sendMessageWithTransfer(
+            _receiver,
+            srcTokenOut,
+            srcAmtOut,
+            _dstChainId,
+            _nonce,
+            _maxBridgeSlippage,
+            message,
+            _fee
+        );
+        emit SwapRequestSent(id, _dstChainId, _amountIn, _srcSwap.path[0], _dstSwap.path[_dstSwap.path.length - 1]);
+    }
+
+    function _sendMessageWithTransfer(
+        address _receiver,
+        address srcTokenOut,
+        uint256 srcAmtOut,
+        uint64 _dstChainId,
+        uint64 _nonce,
+        uint32 _maxBridgeSlippage,
+        bytes memory _message,
+        uint256 _fee
+    ) private {
+        // sends directly to msgBus
         sendMessageWithTransfer(
             _receiver,
             srcTokenOut,
@@ -238,12 +272,11 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
             _dstChainId,
             _nonce,
             _maxBridgeSlippage,
-            message,
+            _message,
             MessageSenderLib.BridgeType.Liquidity,
-            _fee
+            _fee - dstCryptoFee[_dstChainId]
         );
-        emit SwapRequestSent(id, _dstChainId, _amountIn, _srcSwap.path[0], _dstSwap.path[_dstSwap.path.length - 1]);
-    }
+     }
 
     /**
      * @notice called by MessageBus when the tokens are checked to be arrived at this contract's address.
@@ -372,12 +405,20 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
     }
 
     function setMinSwapAmount(uint256 _minSwapAmount) external onlyOwner {
-        minSwapAmount = _minSwapAmount;
+        minSwapAmount = _minSwapAmount * 10**decimals;
     }
 
     function setRubicFee(uint256 _feeRubic) external onlyOwner {
         require(_feeRubic < 5000000);
         feeRubic = _feeRubic;
+    }
+
+    function setDecimalsUSD(uint8 _decimals) external onlyOwner {
+        decimals = _decimals;
+    }
+
+    function setCryptoFee(uint64 _networkID, uint256 _amount) external onlyOwner {
+        dstCryptoFee[_networkID] = _amount;
     }
 
     function setSupportedDex(address _dex, bool _enabled) external onlyOwner {
