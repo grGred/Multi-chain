@@ -64,6 +64,7 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
         uint256 amountOut,
         address tokenOut
     );
+
     event SwapRequestSent(bytes32 id, uint64 dstChainId, uint256 srcAmount, address srcToken, address dstToken);
     event SwapRequestDone(bytes32 id, uint256 dstAmount, SwapStatus status);
 
@@ -176,9 +177,9 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
 
         // swap source token for intermediate token on the source DEX
         if (_srcSwap.path.length > 1) {
-            bool ok = true;
-            (ok, srcAmtOut) = _trySwap(_srcSwap, _amountIn);
-            if (!ok) revert("src swap failed");
+            bool success;
+            (success, srcAmtOut) = _defineDex(_srcSwap, _amountIn);
+            if (!success) revert("src swap failed");
         }
 
         require(srcAmtOut >= minSwapAmount, "amount must be greater than min swap amount");
@@ -201,6 +202,20 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
                 srcAmtOut
             );
         }
+    }
+
+    function _defineDex(SwapInfo memory _swapData, uint256 _amountIn) private returns (bool, uint256) {
+        bool ok = true;
+        uint256 _srcAmtOut;
+        if (_swapData.version == SwapVersion.v3) {
+            (ok, _srcAmtOut) = _trySwapV3(_swapData, _amountIn);
+        }
+        if (_swapData.version == SwapVersion.inch) {
+            (ok, _srcAmtOut) = _trySwapInch(_swapData, _amountIn);
+        } else {
+            (ok, _srcAmtOut) = _trySwapV2(_swapData, _amountIn);
+        }
+        return (ok, _srcAmtOut);
     }
 
     function _directSend(
@@ -301,9 +316,9 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
         SwapStatus status = SwapStatus.Succeeded;
 
         if (m.swap.path.length > 1) {
-            bool ok = true;
-            (ok, dstAmount) = _trySwap(m.swap, _amount);
-            if (ok) {
+            bool success;
+            (success, dstAmount) = _defineDex(m.swap, _amount);
+            if (success) {
                 _sendToken(m.swap.path[m.swap.path.length - 1], dstAmount, m.receiver, m.nativeOut);
                 status = SwapStatus.Succeeded;
             } else {
@@ -358,7 +373,49 @@ contract TransferSwap is MessageSenderApp, MessageReceiverApp {
         token.transfer(msg.sender, token.balanceOf(address(this)));
     }
 
-    function _trySwap(SwapInfo memory _swap, uint256 _amount) private returns (bool ok, uint256 amountOut) {
+    function _trySwapV2(SwapInfo memory _swap, uint256 _amount) private returns (bool ok, uint256 amountOut) {
+        uint256 zero;
+        if (!supportedDex[_swap.dex]) {
+            return (false, zero);
+        }
+        IERC20(_swap.path[0]).safeIncreaseAllowance(_swap.dex, _amount);
+        try
+            IUniswapV2(_swap.dex).swapExactTokensForTokens(
+                _amount,
+                _swap.minRecvAmt,
+                _swap.path,
+                address(this),
+                _swap.deadline
+            )
+        returns (uint256[] memory amounts) {
+            return (true, amounts[amounts.length - 1]);
+        } catch {
+            return (false, zero);
+        }
+    }
+
+    function _trySwapInch(SwapInfo memory _swap, uint256 _amount) private returns (bool ok, uint256 amountOut) {
+        uint256 zero;
+        if (!supportedDex[_swap.dex]) {
+            return (false, zero);
+        }
+        IERC20(_swap.path[0]).safeIncreaseAllowance(_swap.dex, _amount);
+        try
+            IUniswapV2(_swap.dex).swapExactTokensForTokens(
+                _amount,
+                _swap.minRecvAmt,
+                _swap.path,
+                address(this),
+                _swap.deadline
+            )
+        returns (uint256[] memory amounts) {
+            return (true, amounts[amounts.length - 1]);
+        } catch {
+            return (false, zero);
+        }
+    }
+
+    function _trySwapV3(SwapInfo memory _swap, uint256 _amount) private returns (bool ok, uint256 amountOut) {
         uint256 zero;
         if (!supportedDex[_swap.dex]) {
             return (false, zero);
