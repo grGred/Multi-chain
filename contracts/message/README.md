@@ -2,23 +2,8 @@
 
 **Note: cBridge general message passing module is work in progress, and is subject to change in later iterations**
 
-- [End-to-End Flow](#end-to-end-flow)
 - [Application Framework](#application-framework)
 - [Fee Mechanims](#fee-mechanism)
-
-## End-to-End Flow
-
-### Cross-chain message passing with token transfer
-
-SrcApp at source chain wants to send some tokens to DstApp at destination chain, along with an arbitrary message associated with the transfer. Figure below describes the end-to-end flow of such transfers. The SrcApp sends both cross-chain token transfer and message passing requests in the same transaction. SGN catches and correlates both events, then completes the token transfer at the destination chain. The executor then submits the SGN-signed message and token transfer info to the message bus at the destination chain, which will verify the submitted info and call DstApp to execute the message.
-
-![MsgTransfer](pics/msg-transfer-flow.png 'Figure 1: Cross-chain message passing with token transfer')
-
-### Cross-chain message passing only
-
-SrcApp at source chain wants to send an arbitrary message to DstApp at destination chain without associated token transfer. Figure below describes the end-to-end flow, which is a subset of the above flow.
-
-![Msg](pics/msg-only-flow.png 'Figure 1: Cross-chain message passing without token transfer')
 
 ## Application Framework
 
@@ -27,15 +12,7 @@ We provide the [message bus contract](./messagebus) and [application framework](
 - To send cross-chain message and token transfer, the app needs to inherent [MsgSenderApp.sol](./framework/MessageSenderApp.sol) and call the utils functions.
 - To receive cross-chain message and token transfer, the app needs to inherent [MsgReceiverApp.sol](./framework/MessageReceiverApp.sol) and implement its virtual functions.
 
-### Example 1: [Batch Token Transfer](./apps/BatchTransfer.sol)
-
-[BatchTransfer.sol](./apps/BatchTransfer.sol) is an example app that sends tokens from one sender at the source chain to multiple receivers at the destination chain through a single cross-chain token transfer. The high-level workflow consists of three steps:
-
-1. Sender side calls `batchTransfer` at source chain, which internally calls app framework's `sendMessageWithTransfer` to send message and tokens.
-2. Receiver side implements the `executeMessageWithTransfer` interface to handle the batch transfer message, and distribute tokens to receiver accounts according to the message content. It also internally calls app framework's `sendMessage` to send a receipt to the source app.
-3. Sender side implements the `executeMessage` interface to handle the receipt message.
-
-### Example 2: [Cross Chain Swap](./apps/TransferSwap.sol)
+### Example: [Cross Chain Swap](./apps/TransferSwap.sol)
 
 [TransferSwap.sol](./apps/TransferSwap.sol) is an example app that allows swapping one token on chain1 to another token on chain2 through cBridge and DEXes on both chain1 and chain2.
 
