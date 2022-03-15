@@ -4,7 +4,7 @@ import "./TransferSwapV2.sol";
 import "./TransferSwapV3.sol";
 import "./TransferSwapInch.sol";
 
-contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
+abstract contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
     using SafeERC20 for IERC20;
 
     /**
@@ -21,17 +21,37 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
         address _token,
         uint256 _amount,
         uint64 _srcChainId,
+        bytes memory _message,
+        SwapVersion version
+    ) external payable onlyMessageBus returns (bool) {
+        if (version == SwapVersion.v3) {
+            _executeDstSwapV3(_token, _amount, _srcChainId, _message);
+        }
+        if (version == SwapVersion.v2) {
+            _executeDstSwapV2(_token, _amount, _srcChainId, _message);
+        } else {
+            _executeDstSwapInch(_token, _amount, _srcChainId, _message);
+        }
+
+        // always return true since swap failure is already handled in-place
+        return true;
+    }
+
+    function _executeDstSwapInch(
+        address _token,
+        uint256 _amount,
+        uint64 _srcChainId,
         bytes memory _message
-    ) external payable override onlyMessageBus returns (bool) {
-        SwapRequestV2 memory m = abi.decode((_message), (SwapRequestV2));
+    ) private {
+        SwapRequestInch memory m = abi.decode((_message), (SwapRequestInch));
         require(_token == m.swap.path[0], "bridged token must be the same as the first token in destination swap path");
-        bytes32 id = _computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
+        bytes32 id = SwapBase._computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
         uint256 dstAmount;
         SwapStatus status = SwapStatus.Succeeded;
 
         if (m.swap.path.length > 1) {
             bool success;
-            (success, dstAmount) = _defineDex(m.swap, _amount);
+            (success, dstAmount) = _trySwapInch(m.swap, _amount);
             if (success) {
                 _sendToken(m.swap.path[m.swap.path.length - 1], dstAmount, m.receiver, m.nativeOut);
                 status = SwapStatus.Succeeded;
@@ -48,8 +68,72 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
             status = SwapStatus.Succeeded;
         }
         emit SwapRequestDone(id, dstAmount, status);
-        // always return true since swap failure is already handled in-place
-        return true;
+    }
+
+    function _executeDstSwapV2(
+        address _token,
+        uint256 _amount,
+        uint64 _srcChainId,
+        bytes memory _message
+    ) private {
+        SwapRequestV2 memory m = abi.decode((_message), (SwapRequestV2));
+        require(_token == m.swap.path[0], "bridged token must be the same as the first token in destination swap path");
+        bytes32 id = SwapBase._computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
+        uint256 dstAmount;
+        SwapStatus status = SwapStatus.Succeeded;
+
+        if (m.swap.path.length > 1) {
+            bool success;
+            (success, dstAmount) = _trySwapV2(m.swap, _amount);
+            if (success) {
+                _sendToken(m.swap.path[m.swap.path.length - 1], dstAmount, m.receiver, m.nativeOut);
+                status = SwapStatus.Succeeded;
+            } else {
+                // handle swap failure, send the received token directly to receiver
+                _sendToken(_token, _amount, m.receiver, false);
+                dstAmount = _amount;
+                status = SwapStatus.Fallback;
+            }
+        } else {
+            // no need to swap, directly send the bridged token to user
+            _sendToken(m.swap.path[0], _amount, m.receiver, m.nativeOut);
+            dstAmount = _amount;
+            status = SwapStatus.Succeeded;
+        }
+        emit SwapRequestDone(id, dstAmount, status);
+    }
+
+    function _executeDstSwapV3(
+        address _token,
+        uint256 _amount,
+        uint64 _srcChainId,
+        bytes memory _message
+    ) private {
+        SwapRequestV3 memory m = abi.decode((_message), (SwapRequestV3));
+        require(_token == address(SwapBase._getFirstBytes20(m.swap.path)), "bridged token must be the same as the first token in destination swap path");
+        bytes32 id = SwapBase._computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
+        uint256 dstAmount;
+        SwapStatus status = SwapStatus.Succeeded;
+
+        if (m.swap.path.length > 20) {
+            bool success;
+            (success, dstAmount) = _trySwapV3(m.swap, _amount);
+            if (success) {
+                _sendToken(address(SwapBase._getLastBytes20(m.swap.path)), dstAmount, m.receiver, m.nativeOut);
+                status = SwapStatus.Succeeded;
+            } else {
+                // handle swap failure, send the received token directly to receiver
+                _sendToken(_token, _amount, m.receiver, false);
+                dstAmount = _amount;
+                status = SwapStatus.Fallback;
+            }
+        } else {
+            // no need to swap, directly send the bridged token to user
+            _sendToken(address(SwapBase._getFirstBytes20(m.swap.path)), _amount, m.receiver, m.nativeOut);
+            dstAmount = _amount;
+            status = SwapStatus.Succeeded;
+        }
+        emit SwapRequestDone(id, dstAmount, status);
     }
 
     /**
@@ -59,14 +143,15 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
      */
     function executeMessageWithTransferFallback(
         address, // _sender (executor)
-        address _token, // _token
-        uint256 _amount, // _amount
+        address,
+        uint256 _amount,
         uint64 _srcChainId,
         bytes memory _message
     ) external payable override onlyMessageBus returns (bool) {
         SwapRequestV2 memory m = abi.decode((_message), (SwapRequestV2));
-        bytes32 id = _computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
-        IERC20(_token).safeTransfer(m.receiver, _amount);
+
+        bytes32 id = SwapBase._computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
+        _sendToken(m.swap.path[0], _amount, m.receiver, false);
         emit SwapRequestDone(id, 0, SwapStatus.Failed);
         // always return false to mark this transfer as failed since if this function is called then there nothing more
         // we can do in this app as the swap failures are already handled in executeMessageWithTransfer
@@ -74,29 +159,30 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
     }
 
     function executeMessageWithTransferRefund(
-        address _token,
+        address,
         uint256 _amount,
         bytes calldata _message
     ) external payable override onlyMessageBus returns (bool) {
         SwapRequestV2 memory m = abi.decode((_message), (SwapRequestV2));
-        IERC20(_token).safeTransfer(m.receiver, _amount);
+        _sendToken(m.swap.path[m.swap.path.length - 1], _amount, m.receiver, false);
         return true;
     }
 
-
-    /*function _defineDex(SwapInfoV2 memory _swapData, uint256 _amountIn) private returns (bool, uint256) {
-        bool ok = true;
-        uint256 _srcAmtOut;
-        if (_swapData.version == SwapVersion.v3) {
-            (ok, _srcAmtOut) = _trySwapV3(_swapData, _amountIn);
-        }
-        if (_swapData.version == SwapVersion.inch) {
-            (ok, _srcAmtOut) = _trySwapInch(_swapData, _amountIn);
+    function _sendToken(
+        address _token,
+        uint256 _amount,
+        address _receiver,
+        bool _nativeOut
+    ) private {
+        if (_nativeOut) {
+            require(_token == nativeWrap, "token mismatch");
+            IWETH(nativeWrap).withdraw(_amount);
+            (bool sent, ) = _receiver.call{value: _amount, gas: 50000}(""); //
+            require(sent, "failed to send native");
         } else {
-            (ok, _srcAmtOut) = _trySwapV2(_swapData, _amountIn);
+            IERC20(_token).safeTransfer(_receiver, _amount);
         }
-        return (ok, _srcAmtOut);
-    }*/
+    }
 
 
     function setMinSwapAmount(uint256 _minSwapAmount) external onlyOwner {

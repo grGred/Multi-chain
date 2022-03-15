@@ -2,9 +2,9 @@ pragma solidity >=0.8.9;
 
 import "./SwapBase.sol";
 import "../../interfaces/IWETH.sol";
-import "../../interfaces/ISwapRouter.sol";
 
-contract TransferSwapInch is SwapBase {
+abstract contract TransferSwapInch is SwapBase {
+    using Address for address payable;
     using SafeERC20 for IERC20;
 
     // emitted when requested dstChainId == srcChainId, no bridging
@@ -27,11 +27,10 @@ contract TransferSwapInch is SwapBase {
         SwapInfoInch calldata _srcSwap,
         SwapInfoInch calldata _dstSwap,
         uint32 _maxBridgeSlippage,
-        SwapVersion _version,
         uint64 _nonce,
         bool _nativeOut
     ) external payable onlyEOA {
-        require(address(_getFirstBytes20(_srcSwap.path)) == nativeWrap, "token mismatch");
+        require(_srcSwap.path[0] == nativeWrap, "token mismatch");
         require(msg.value >= _amountIn, "Amount insufficient");
         IWETH(nativeWrap).deposit{value: _amountIn}();
         _transferWithSwapInch(
@@ -54,19 +53,17 @@ contract TransferSwapInch is SwapBase {
         SwapInfoInch calldata _srcSwap,
         SwapInfoInch calldata _dstSwap,
         uint32 _maxBridgeSlippage,
-        SwapVersion _version,
         uint64 _nonce,
         bool _nativeOut
     ) external payable onlyEOA {
-        IERC20(address(_getFirstBytes20(_srcSwap.path))).safeTransferFrom(msg.sender, address(this), _amountIn);
+        IERC20(_srcSwap.path[0]).safeTransferFrom(msg.sender, address(this), _amountIn);
         _transferWithSwapInch(
             _receiver,
-            _srcSwap.amountIn,
+            _amountIn,
             _dstChainId,
             _srcSwap,
             _dstSwap,
             _maxBridgeSlippage,
-            _version,
             _nonce,
             _nativeOut,
             msg.value
@@ -94,21 +91,20 @@ contract TransferSwapInch is SwapBase {
         SwapInfoInch memory _srcSwap,
         SwapInfoInch memory _dstSwap,
         uint32 _maxBridgeSlippage,
-        SwapVersion _version,
         uint64 _nonce,
         bool _nativeOut,
         uint256 _fee
     ) private {
         require(_srcSwap.path.length > 0, "empty src swap path");
-        address srcTokenOut = address(_getLastBytes20(_srcSwap.path));
+        address srcTokenOut = _srcSwap.path[_srcSwap.path.length - 1];
 
         uint64 chainId = uint64(block.chainid);
-        require(_srcSwap.path.length > 20 || _dstChainId != chainId, "noop is not allowed"); // revert early to save gas
+        require(_srcSwap.path.length > 1 || _dstChainId != chainId, "noop is not allowed"); // revert early to save gas
 
         uint256 srcAmtOut = _amountIn;
 
         // swap source token for intermediate token on the source DEX
-        if (_srcSwap.path.length > 20) {
+        if (_srcSwap.path.length > 1) {
             bool success;
             (success, srcAmtOut) = _trySwapInch(_srcSwap, _amountIn);
             if (!success) revert("src swap failed");
@@ -127,7 +123,6 @@ contract TransferSwapInch is SwapBase {
                 _srcSwap,
                 _dstSwap,
                 _maxBridgeSlippage,
-                _version,
                 _nonce,
                 _nativeOut,
                 _fee,
@@ -159,9 +154,8 @@ contract TransferSwapInch is SwapBase {
         uint64 _chainId,
         uint64 _dstChainId,
         SwapInfoInch memory _srcSwap,
-        SwapInfoInch memory _dstSwap, // TODO: change
+        SwapInfoInch memory _dstSwap,
         uint32 _maxBridgeSlippage,
-        SwapVersion _version,
         uint64 _nonce,
         bool _nativeOut,
         uint256 _fee,
@@ -170,9 +164,9 @@ contract TransferSwapInch is SwapBase {
     ) private {
         require(_dstSwap.path.length > 0, "empty dst swap path");
         bytes memory message = abi.encode(
-            SwapRequestInch({swap: _dstSwap, receiver: msg.sender, nonce: _nonce, nativeOut: _nativeOut, version: _version})
+            SwapRequestInch({swap: _dstSwap, receiver: msg.sender, nonce: _nonce, nativeOut: _nativeOut})
         );
-        bytes32 id = _computeSwapRequestId(msg.sender, _chainId, _dstChainId, message);
+        bytes32 id = SwapBase._computeSwapRequestId(msg.sender, _chainId, _dstChainId, message);
         // bridge the intermediate token to destination chain along with the message
         // NOTE In production, it's better use a per-user per-transaction nonce so that it's less likely transferId collision
         // would happen at Bridge contract. Currently this nonce is a timestamp supplied by frontend
@@ -186,7 +180,7 @@ contract TransferSwapInch is SwapBase {
             message,
             _fee
         );
-        emit SwapRequestSent(id, _dstChainId, _amountIn, _srcSwap.path[0], _dstSwap.path[_dstSwap.path.length - 1]);
+        emit SwapRequestSentInch(id, _dstChainId, _amountIn, _srcSwap.path[0], _dstSwap.path[_dstSwap.path.length - 1]);
     }
 
     function _sendMessageWithTransferInch(
@@ -213,50 +207,25 @@ contract TransferSwapInch is SwapBase {
         );
      }
 
-    function _trySwapInch(SwapInfoInch memory _swap, uint256 _amount) private returns (bool ok, uint256 amountOut) {
+    function _trySwapInch(SwapInfoInch memory _swap, uint256 _amount) internal returns (bool ok, uint256 amountOut) {
         uint256 zero;
         if (!supportedDex[_swap.dex]) {
             return (false, zero);
         }
         IERC20(_swap.path[0]).safeIncreaseAllowance(_swap.dex, _amount);
-        try
-            IUniswapV2(_swap.dex).swapExactTokensForTokens(
-                _amount,
-                _swap.minRecvAmt,
-                _swap.path,
-                address(this),
-                _swap.deadline
-            )
-        returns (uint256[] memory amounts) {
-            return (true, amounts[amounts.length - 1]);
-        } catch {
-            return (false, zero);
-        }
-    }
 
-    function _sendTokenInch(
-        address _token,
-        uint256 _amount,
-        address _receiver,
-        bool _nativeOut
-    ) private {
-        if (_nativeOut) {
-            require(_token == nativeWrap, "token mismatch");
-            IWETH(nativeWrap).withdraw(_amount);
-            (bool sent, ) = _receiver.call{value: _amount, gas: 50000}(""); //
-            require(sent, "failed to send native");
-        } else {
-            IERC20(_token).safeTransfer(_receiver, _amount);
-        }
-    }
+        IERC20 Transit = IERC20(_swap.path[_swap.path.length - 1]);
+        uint transitBalanceBefore = Transit.balanceOf(address(this));
 
-    function _computeSwapRequestId(
-        address _sender,
-        uint64 _srcChainId,
-        uint64 _dstChainId,
-        bytes memory _message
-    ) private pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_sender, _srcChainId, _dstChainId, _message));
+        Address.functionCall(_swap.dex, _swap.data);
+
+        uint256 balanceDif = Transit.balanceOf(address(this)) - transitBalanceBefore;
+
+        if (balanceDif >= _swap.amountOutMinimum) {
+            return (true, balanceDif);
+        }
+
+        return (false, zero);
     }
 
 }

@@ -5,7 +5,7 @@ import "../../interfaces/IWETH.sol";
 import "../../interfaces/IUniswapV2.sol";
 
 
-contract TransferSwapV2 is SwapBase {
+abstract contract TransferSwapV2 is SwapBase {
     using SafeERC20 for IERC20;
 
     // emitted when requested dstChainId == srcChainId, no bridging
@@ -168,7 +168,7 @@ contract TransferSwapV2 is SwapBase {
         bytes memory message = abi.encode(
             SwapRequestV2({swap: _dstSwap, receiver: msg.sender, nonce: _nonce, nativeOut: _nativeOut})
         );
-        bytes32 id = _computeSwapRequestId(msg.sender, _chainId, _dstChainId, message);
+        bytes32 id = SwapBase._computeSwapRequestId(msg.sender, _chainId, _dstChainId, message);
         // bridge the intermediate token to destination chain along with the message
         // NOTE In production, it's better use a per-user per-transaction nonce so that it's less likely transferId collision
         // would happen at Bridge contract. Currently this nonce is a timestamp supplied by frontend
@@ -209,7 +209,7 @@ contract TransferSwapV2 is SwapBase {
         );
      }
 
-    function _trySwapV2(SwapInfoV2 memory _swap, uint256 _amount) private returns (bool ok, uint256 amountOut) {
+    function _trySwapV2(SwapInfoV2 memory _swap, uint256 _amount) internal returns (bool ok, uint256 amountOut) {
         uint256 zero;
         if (!supportedDex[_swap.dex]) {
             return (false, zero);
@@ -228,31 +228,6 @@ contract TransferSwapV2 is SwapBase {
         } catch {
             return (false, zero);
         }
-    }
-
-    function _sendToken(
-        address _token,
-        uint256 _amount,
-        address _receiver,
-        bool _nativeOut
-    ) private {
-        if (_nativeOut) {
-            require(_token == nativeWrap, "token mismatch");
-            IWETH(nativeWrap).withdraw(_amount);
-            (bool sent, ) = _receiver.call{value: _amount, gas: 50000}(""); //
-            require(sent, "failed to send native");
-        } else {
-            IERC20(_token).safeTransfer(_receiver, _amount);
-        }
-    }
-
-    function _computeSwapRequestId(
-        address _sender,
-        uint64 _srcChainId,
-        uint64 _dstChainId,
-        bytes memory _message
-    ) private pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_sender, _srcChainId, _dstChainId, _message));
     }
 
 }

@@ -58,32 +58,42 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
         // indicates whether the output token coming out of the swap on destination
         // chain should be unwrapped before sending to the user
         bool nativeOut;
-        SwapVersion version;
     }
 
     // ============== structs for V3 like dexes ==============
 
     struct SwapInfoV3 {
         address dex; // the DEX to use for the swap
-        // the receiving party (the user) of the final output token
         bytes path;
-        // address receiver;
         uint256 deadline;
-        // uint256 amountIn;
         uint256 amountOutMinimum;
     }
 
     struct SwapRequestV3 {
         SwapInfoV3 swap;
-        // this field is best to be per-user per-transaction unique so that
-        // a nonce that is specified by the calling party (the user),
-        address receiver;
+        address receiver; // EOA
         uint64 nonce;
-        // indicates whether the output token coming out of the swap on destination
-        // chain should be unwrapped before sending to the user
         bool nativeOut;
-        SwapVersion version;
     }
+
+    // ============== structs for inch ==============
+
+    struct SwapInfoInch {
+        address dex; // the DEX to use for the swap
+        // path is tokenIn, tokenOut
+        address[] path;
+        bytes data;
+        uint256 amountOutMinimum;
+    }
+
+    struct SwapRequestInch {
+        SwapInfoInch swap;
+        address receiver; // EOA
+        uint64 nonce;
+        bool nativeOut;
+    }
+
+    // ============== struct dstSwap ==============
 
     enum SwapVersion {
         inch,
@@ -119,6 +129,15 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
         assembly {
             result := mload(add(input, offset))
         }
+    }
+
+    function _computeSwapRequestId(
+        address _sender,
+        uint64 _srcChainId,
+        uint64 _dstChainId,
+        bytes memory _message
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_sender, _srcChainId, _dstChainId, _message));
     }
 
     // This is needed to receive ETH when calling `IWETH.withdraw`
