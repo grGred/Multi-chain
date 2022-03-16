@@ -4,8 +4,21 @@ import "./TransferSwapV2.sol";
 import "./TransferSwapV3.sol";
 import "./TransferSwapInch.sol";
 
-abstract contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
+contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
     using SafeERC20 for IERC20;
+
+    constructor(
+        address _messageBus,
+        address _supportedDex,
+        address _nativeWrap
+    ) {
+        messageBus = _messageBus;
+        supportedDex[_supportedDex] = true;
+        nativeWrap = _nativeWrap;
+        dstCryptoFee[43114] = 10000000;
+        minSwapAmount = 8 * 10**decimals; // * decimals which are changeable
+        feeRubic = 160000; // 0.16%
+    }
 
     /**
      * @notice called by MessageBus when the tokens are checked to be arrived at this contract's address.

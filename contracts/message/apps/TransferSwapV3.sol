@@ -5,7 +5,7 @@ import "../../interfaces/IWETH.sol";
 import "../../interfaces/ISwapRouter.sol";
 
 
-abstract contract TransferSwapV3 is SwapBase {
+contract TransferSwapV3 is SwapBase {
     using SafeERC20 for IERC20;
 
     // emitted when requested dstChainId == srcChainId, no bridging
@@ -18,7 +18,7 @@ abstract contract TransferSwapV3 is SwapBase {
         address tokenOut
     );
 
-    event SwapRequestSentV3(bytes32 id, uint64 dstChainId, uint256 srcAmount, address srcToken, address dstToken);
+    event SwapRequestSentV3(bytes32 id, uint64 dstChainId, uint256 srcAmount, address srcToken);
     event SwapRequestDoneV3(bytes32 id, uint256 dstAmount, SwapStatus status);
 
     function transferWithSwapV3Native(
@@ -26,7 +26,7 @@ abstract contract TransferSwapV3 is SwapBase {
         uint256 _amountIn,
         uint64 _dstChainId,
         SwapInfoV3 calldata _srcSwap,
-        SwapInfoV3 calldata _dstSwap,
+        SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
         uint64 _nonce,
         bool _nativeOut
@@ -52,7 +52,7 @@ abstract contract TransferSwapV3 is SwapBase {
         uint256 _amountIn,
         uint64 _dstChainId,
         SwapInfoV3 calldata _srcSwap,
-        SwapInfoV3 calldata _dstSwap,
+        SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
         uint64 _nonce,
         bool _nativeOut
@@ -90,7 +90,7 @@ abstract contract TransferSwapV3 is SwapBase {
         uint256 _amountIn,
         uint64 _dstChainId,
         SwapInfoV3 memory _srcSwap,
-        SwapInfoV3 memory _dstSwap,
+        SwapInfoDest memory _dstSwap,
         uint32 _maxBridgeSlippage,
         uint64 _nonce,
         bool _nativeOut,
@@ -155,7 +155,7 @@ abstract contract TransferSwapV3 is SwapBase {
         uint64 _chainId,
         uint64 _dstChainId,
         SwapInfoV3 memory _srcSwap,
-        SwapInfoV3 memory _dstSwap,
+        SwapInfoDest memory _dstSwap,
         uint32 _maxBridgeSlippage,
         uint64 _nonce,
         bool _nativeOut,
@@ -165,7 +165,7 @@ abstract contract TransferSwapV3 is SwapBase {
     ) private {
         require(_dstSwap.path.length > 0, "empty dst swap path");
         bytes memory message = abi.encode(
-            SwapRequestV3({swap: _dstSwap, receiver: msg.sender, nonce: _nonce, nativeOut: _nativeOut})
+            SwapRequestDest({swap: _dstSwap, receiver: msg.sender, nonce: _nonce, nativeOut: _nativeOut})
         );
         bytes32 id = SwapBase._computeSwapRequestId(msg.sender, _chainId, _dstChainId, message);
         // bridge the intermediate token to destination chain along with the message
@@ -181,7 +181,7 @@ abstract contract TransferSwapV3 is SwapBase {
             message,
             _fee
         );
-        emit SwapRequestSentV3(id, _dstChainId, _amountIn, address(SwapBase._getFirstBytes20(_srcSwap.path)), address(SwapBase._getLastBytes20(_dstSwap.path)));
+        emit SwapRequestSentV3(id, _dstChainId, _amountIn, address(SwapBase._getFirstBytes20(_srcSwap.path)));
     }
 
     function _sendMessageWithTransferV3(

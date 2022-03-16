@@ -19,19 +19,6 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
     uint256 public feeRubic; // 1m is 100%
     uint8 public decimals = 18;
 
-    constructor(
-        address _messageBus,
-        address _supportedDex,
-        address _nativeWrap
-    ) {
-        messageBus = _messageBus;
-        supportedDex[_supportedDex] = true;
-        nativeWrap = _nativeWrap;
-        dstCryptoFee[43114] = 10000000;
-        minSwapAmount = 8 * 10**decimals; // * decimals which are changeable
-        feeRubic = 160000; // 0.16%
-    }
-
     modifier onlyEOA() {
         require(msg.sender == tx.origin, "Not EOA");
         _;
@@ -40,12 +27,12 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
     // ============== structs for V2 like dexes ==============
 
     struct SwapInfoV2 {
+        address dex; // the DEX to use for the swap
         // if this array has only one element, it means no need to swap
         address[] path;
         // the following fields are only needed if path.length > 1
-        address dex; // the DEX to use for the swap
         uint256 deadline; // deadline for the swap
-        uint256 minRecvAmt; // minimum receive amount for the swap
+        uint256 amountOutMinimum; // minimum receive amount for the swap
     }
 
     struct SwapRequestV2 {
@@ -94,6 +81,24 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
     }
 
     // ============== struct dstSwap ==============
+    // This is needed to make v2 -> SGN -> v3 swaps and etc.
+
+    struct SwapInfoDest {
+        address dex;  // dex address
+        address[] path; // path address for v2 and inch
+        bytes pathV3; // path address for v3 TODO: change for address[]
+        uint256 deadline; // for v2 and v3
+        bytes data; // for inch only
+        uint256 amountOutMinimum;
+        SwapVersion version; // identifies swap type
+    }
+
+    struct SwapRequestDest {
+        SwapInfoDest swap;
+        address receiver; // EOA
+        uint64 nonce;
+        bool nativeOut;
+    }
 
     enum SwapVersion {
         inch,

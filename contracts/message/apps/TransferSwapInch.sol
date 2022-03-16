@@ -3,7 +3,7 @@ pragma solidity >=0.8.9;
 import "./SwapBase.sol";
 import "../../interfaces/IWETH.sol";
 
-abstract contract TransferSwapInch is SwapBase {
+contract TransferSwapInch is SwapBase {
     using Address for address payable;
     using SafeERC20 for IERC20;
 
@@ -17,7 +17,7 @@ abstract contract TransferSwapInch is SwapBase {
         address tokenOut
     );
 
-    event SwapRequestSentInch(bytes32 id, uint64 dstChainId, uint256 srcAmount, address srcToken, address dstToken);
+    event SwapRequestSentInch(bytes32 id, uint64 dstChainId, uint256 srcAmount, address srcToken);
     event SwapRequestDone(bytes32 id, uint256 dstAmount, SwapStatus status);
 
     function transferWithSwapInchNative(
@@ -25,7 +25,7 @@ abstract contract TransferSwapInch is SwapBase {
         uint256 _amountIn,
         uint64 _dstChainId,
         SwapInfoInch calldata _srcSwap,
-        SwapInfoInch calldata _dstSwap,
+        SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
         uint64 _nonce,
         bool _nativeOut
@@ -51,7 +51,7 @@ abstract contract TransferSwapInch is SwapBase {
         uint256 _amountIn,
         uint64 _dstChainId,
         SwapInfoInch calldata _srcSwap,
-        SwapInfoInch calldata _dstSwap,
+        SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
         uint64 _nonce,
         bool _nativeOut
@@ -89,7 +89,7 @@ abstract contract TransferSwapInch is SwapBase {
         uint256 _amountIn,
         uint64 _dstChainId,
         SwapInfoInch memory _srcSwap,
-        SwapInfoInch memory _dstSwap,
+        SwapInfoDest memory _dstSwap,
         uint32 _maxBridgeSlippage,
         uint64 _nonce,
         bool _nativeOut,
@@ -154,7 +154,7 @@ abstract contract TransferSwapInch is SwapBase {
         uint64 _chainId,
         uint64 _dstChainId,
         SwapInfoInch memory _srcSwap,
-        SwapInfoInch memory _dstSwap,
+        SwapInfoDest memory _dstSwap,
         uint32 _maxBridgeSlippage,
         uint64 _nonce,
         bool _nativeOut,
@@ -164,7 +164,7 @@ abstract contract TransferSwapInch is SwapBase {
     ) private {
         require(_dstSwap.path.length > 0, "empty dst swap path");
         bytes memory message = abi.encode(
-            SwapRequestInch({swap: _dstSwap, receiver: msg.sender, nonce: _nonce, nativeOut: _nativeOut})
+            SwapRequestDest({swap: _dstSwap, receiver: msg.sender, nonce: _nonce, nativeOut: _nativeOut})
         );
         bytes32 id = SwapBase._computeSwapRequestId(msg.sender, _chainId, _dstChainId, message);
         // bridge the intermediate token to destination chain along with the message
@@ -180,7 +180,7 @@ abstract contract TransferSwapInch is SwapBase {
             message,
             _fee
         );
-        emit SwapRequestSentInch(id, _dstChainId, _amountIn, _srcSwap.path[0], _dstSwap.path[_dstSwap.path.length - 1]);
+        emit SwapRequestSentInch(id, _dstChainId, _amountIn, _srcSwap.path[0]);
     }
 
     function _sendMessageWithTransferInch(
