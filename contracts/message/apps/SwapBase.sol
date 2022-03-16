@@ -66,7 +66,7 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
     // ============== structs for inch ==============
 
     struct SwapInfoInch {
-        address dex; // the DEX to use for the swap
+        address dex;
         // path is tokenIn, tokenOut
         address[] path;
         bytes data;
