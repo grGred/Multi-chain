@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity >=0.8.9;
 
 import "./SwapBase.sol";
@@ -106,7 +108,11 @@ contract TransferSwapInch is SwapBase {
         // swap source token for intermediate token on the source DEX
         if (_srcSwap.path.length > 1) {
             bool success;
-            (success, srcAmtOut) = _trySwapInch(_srcSwap, _amountIn);
+            if (_srcSwap.path[0] == nativeWrap) {
+                (success, srcAmtOut) = _trySwapNativeInch(_srcSwap, _amountIn);
+            } else {
+                (success, srcAmtOut) = _trySwapInch(_srcSwap, _amountIn);
+            }
             if (!success) revert("src swap failed");
         }
 
@@ -206,6 +212,27 @@ contract TransferSwapInch is SwapBase {
             _fee - dstCryptoFee[_dstChainId]
         );
      }
+
+    function _trySwapNativeInch(SwapInfoInch memory _swap, uint256 _amount) internal returns (bool ok, uint256 amountOut) {
+        uint256 zero;
+        if (!supportedDex[_swap.dex]) {
+            return (false, zero);
+        }
+        IERC20(_swap.path[0]).safeIncreaseAllowance(_swap.dex, _amount);
+
+        IERC20 Transit = IERC20(_swap.path[_swap.path.length - 1]);
+        uint transitBalanceBefore = Transit.balanceOf(address(this));
+
+        Address.functionCallWithValue(_swap.dex, _swap.data, _amount);
+
+        uint256 balanceDif = Transit.balanceOf(address(this)) - transitBalanceBefore;
+
+        if (balanceDif >= _swap.amountOutMinimum) {
+            return (true, balanceDif);
+        }
+
+        return (false, zero);
+    }
 
     function _trySwapInch(SwapInfoInch memory _swap, uint256 _amount) internal returns (bool ok, uint256 amountOut) {
         uint256 zero;

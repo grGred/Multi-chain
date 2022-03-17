@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity >=0.8.9;
 
 import "./TransferSwapV2.sol";
@@ -39,12 +41,12 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
         bytes32 id = SwapBase._computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
         if (m.swap.version == SwapVersion.v3) {
-            _executeDstSwapV3(_token, _amount, _srcChainId, id, m);
+            _executeDstSwapV3(_token, _amount, id, m);
         }
         if (m.swap.version == SwapVersion.v2) {
-            _executeDstSwapV2(_token, _amount, _srcChainId, id, m);
+            _executeDstSwapV2(_token, _amount, id, m);
         } else {
-            _executeDstSwapInch(_token, _amount, _srcChainId, id, m);
+            _executeDstSwapInch(_token, _amount, id, m);
         }
         // always return true since swap failure is already handled in-place
         return true;
@@ -53,7 +55,6 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
     function _executeDstSwapInch(
         address _token,
         uint256 _amount,
-        uint64 _srcChainId,
         bytes32 _id,
         SwapRequestDest memory _msgDst
     ) private {
@@ -65,7 +66,11 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
         SwapInfoInch memory _dstSwap = SwapInfoInch({dex: _msgDst.swap.dex, path: _msgDst.swap.path, data: _msgDst.swap.data, amountOutMinimum: _msgDst.swap.amountOutMinimum});
         if (_dstSwap.path.length > 1) {
             bool success;
-            (success, dstAmount) = _trySwapInch(_dstSwap, _amount);
+            if (_dstSwap.path[0] == nativeWrap) {
+                (success, dstAmount) = _trySwapNativeInch(_dstSwap, _amount);
+            } else {
+                (success, dstAmount) = _trySwapInch(_dstSwap, _amount);
+            }
             if (success) {
                 _sendToken(_dstSwap.path[_dstSwap.path.length - 1], dstAmount, _msgDst.receiver, _msgDst.nativeOut);
                 status = SwapStatus.Succeeded;
@@ -87,7 +92,6 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
     function _executeDstSwapV2(
         address _token,
         uint256 _amount,
-        uint64 _srcChainId,
         bytes32 _id,
         SwapRequestDest memory _msgDst
     ) private {
@@ -121,7 +125,6 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
     function _executeDstSwapV3(
         address _token,
         uint256 _amount,
-        uint64 _srcChainId,
         bytes32 _id,
         SwapRequestDest memory _msgDst
     ) private {
@@ -155,7 +158,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
     /**
      * @notice called by MessageBus when the executeMessageWithTransfer call fails. does nothing but emitting a "fail" event
      * @param _srcChainId source chain ID
-     * @param _message SwapRequestV2 message that defines the swap behavior on this destination chain
+     * @param _message SwapRequestDest message that defines the swap behavior on this destination chain
      */
     function executeMessageWithTransferFallback(
         address, // _sender (executor)
@@ -164,10 +167,14 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
         uint64 _srcChainId,
         bytes memory _message
     ) external payable override onlyMessageBus returns (bool) {
-        SwapRequestV2 memory m = abi.decode((_message), (SwapRequestV2));
+        SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
 
         bytes32 id = SwapBase._computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
-        _sendToken(m.swap.path[0], _amount, m.receiver, false);
+        if (m.swap.version == SwapVersion.v3) {
+            _sendToken(address(_getFirstBytes20(m.swap.pathV3)), _amount, m.receiver, false);
+        } else {
+            _sendToken(m.swap.path[0], _amount, m.receiver, false);
+        }
         emit SwapRequestDone(id, 0, SwapStatus.Failed);
         // always return false to mark this transfer as failed since if this function is called then there nothing more
         // we can do in this app as the swap failures are already handled in executeMessageWithTransfer
@@ -179,8 +186,13 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
         uint256 _amount,
         bytes calldata _message
     ) external payable override onlyMessageBus returns (bool) {
-        SwapRequestV2 memory m = abi.decode((_message), (SwapRequestV2));
-        _sendToken(m.swap.path[m.swap.path.length - 1], _amount, m.receiver, false);
+        SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
+        if (m.swap.version == SwapVersion.v3) {
+            _sendToken(address(_getLastBytes20(m.swap.pathV3)), _amount, m.receiver, false);
+        } else {
+            _sendToken(m.swap.path[m.swap.path.length - 1], _amount, m.receiver, false);
+        }
+
         return true;
     }
 
