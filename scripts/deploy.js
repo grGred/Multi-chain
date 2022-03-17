@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 
 async function main() {
-  const CrossChainSwap = await hre.ethers.getContractFactory("TransferSwap");
+  const CrossChainSwap = await hre.ethers.getContractFactory("SwapMain");
   /*
    * constructor
    *     address _messageBus,
@@ -12,15 +12,25 @@ async function main() {
   // BNB Chain 56
   // MessageBus 0x223fB0CeB2C6e5310264EFe38151d7D083db91f1
   // BNB native token address in BSC: 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c
-  // USDC token address in BSC: 0x55d398326f99059fF775485246999027B3197955
+  // USDC token address in BSC: 0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d
   // SUSHI: 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506
 
-  // const CrossChainSwapDeploy = await CrossChainSwap.deploy('0x223fB0CeB2C6e5310264EFe38151d7D083db91f1', '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506', '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c');
+  const CrossChainSwapDeploy = await CrossChainSwap.deploy(
+      '0x223fB0CeB2C6e5310264EFe38151d7D083db91f1',
+      '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506',
+      '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
+  );
 
   // MATIC Polygon 137
   // MessageBus 0x265B25e22bcd7f10a5bD6E6410F10537Cc7567e8
   // MATIC native token address in BSC: 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270
   // USDC token address in BSC: 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174
+  // SUSHI: 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506
+
+  // MATIC Polygon Testnet 80001
+  // MessageBus 0x7d43AABC515C356145049227CeE54B608342c0ad
+  // MATIC native token address:
+  // USDC token address:
   // SUSHI: 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506
 
   // const CrossChainSwapDeploy = await CrossChainSwap.deploy('0x265B25e22bcd7f10a5bD6E6410F10537Cc7567e8', '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506', '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270');
@@ -47,7 +57,7 @@ async function main() {
   // USDC token address in AVALANCHE: 0xA7D7079b0FEaD91F3e65f86E8915Cb59c1a4C664
   // SUSHI: 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506
 
-  const CrossChainSwapDeploy = await CrossChainSwap.deploy('0x7d43AABC515C356145049227CeE54B608342c0ad', '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506', '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7');
+  // const CrossChainSwapDeploy = await CrossChainSwap.deploy('0x7d43AABC515C356145049227CeE54B608342c0ad', '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506', '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7');
 
 
   await CrossChainSwapDeploy.deployed();
@@ -58,15 +68,10 @@ async function main() {
 
   await hre.run("verify:verify", {
     address: CrossChainSwapDeploy.address,
-    constructorArguments: [/*
+    constructorArguments: [
       '0x223fB0CeB2C6e5310264EFe38151d7D083db91f1',
       '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506',
-      '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c' // BSC*/
-
-      '0x265B25e22bcd7f10a5bD6E6410F10537Cc7567e8',
-      '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506',
-      '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270' // POLY
-
+      '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c' // BSC
     ],
   });
 }
