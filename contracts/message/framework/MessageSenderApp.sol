@@ -27,7 +27,13 @@ abstract contract MessageSenderApp is MessageBusAddress {
         bytes memory _message,
         uint256 _fee
     ) internal {
-        MessageSenderLib.sendMessage(_receiver, _dstChainId, _message, messageBus, _fee);
+        MessageSenderLib.sendMessage(
+            _receiver,
+            _dstChainId,
+            _message,
+            messageBus,
+            _fee
+        );
     }
 
     /**

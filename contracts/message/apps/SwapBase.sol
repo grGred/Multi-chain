@@ -8,9 +8,7 @@ import "../framework/MessageBusAddress.sol";
 import "../framework/MessageSenderApp.sol";
 import "../framework/MessageReceiverApp.sol";
 
-
 contract SwapBase is MessageSenderApp, MessageReceiverApp {
-
     mapping(address => bool) supportedDex;
     mapping(uint64 => uint256) public dstCryptoFee;
 
@@ -60,7 +58,7 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
     // This is needed to make v2 -> SGN -> v3 swaps and etc.
 
     struct SwapInfoDest {
-        address dex;  // dex address
+        address dex; // dex address
         address[] path; // path address for v2 and inch
         bytes pathV3; // path address for v3
         uint256 deadline; // for v2 and v3
@@ -118,10 +116,12 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
         uint64 _dstChainId,
         bytes memory _message
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_sender, _srcChainId, _dstChainId, _message));
+        return
+            keccak256(
+                abi.encodePacked(_sender, _srcChainId, _dstChainId, _message)
+            );
     }
 
     // This is needed to receive ETH when calling `IWETH.withdraw`
     receive() external payable {}
-
 }

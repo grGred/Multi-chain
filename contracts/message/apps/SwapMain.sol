@@ -40,7 +40,12 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
         bytes memory _message
     ) external payable override returns (bool) {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
-        bytes32 id = SwapBase._computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
+        bytes32 id = SwapBase._computeSwapRequestId(
+            m.receiver,
+            _srcChainId,
+            uint64(block.chainid),
+            _message
+        );
         if (m.swap.version == SwapVersion.v3) {
             _executeDstSwapV3(_token, _amount, id, m);
         }
@@ -59,12 +64,20 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
         bytes32 _id,
         SwapRequestDest memory _msgDst
     ) private {
-        require(_token == _msgDst.swap.path[0], "bridged token must be the same as the first token in destination swap path");
+        require(
+            _token == _msgDst.swap.path[0],
+            "bridged token must be the same as the first token in destination swap path"
+        );
 
         uint256 dstAmount;
         SwapStatus status = SwapStatus.Succeeded;
 
-        SwapInfoInch memory _dstSwap = SwapInfoInch({dex: _msgDst.swap.dex, path: _msgDst.swap.path, data: _msgDst.swap.data, amountOutMinimum: _msgDst.swap.amountOutMinimum});
+        SwapInfoInch memory _dstSwap = SwapInfoInch({
+            dex: _msgDst.swap.dex,
+            path: _msgDst.swap.path,
+            data: _msgDst.swap.data,
+            amountOutMinimum: _msgDst.swap.amountOutMinimum
+        });
         if (_dstSwap.path.length > 1) {
             bool success;
             if (_dstSwap.path[0] == nativeWrap) {
@@ -73,7 +86,12 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
                 (success, dstAmount) = _trySwapInch(_dstSwap, _amount);
             }
             if (success) {
-                _sendToken(_dstSwap.path[_dstSwap.path.length - 1], dstAmount, _msgDst.receiver, _msgDst.nativeOut);
+                _sendToken(
+                    _dstSwap.path[_dstSwap.path.length - 1],
+                    dstAmount,
+                    _msgDst.receiver,
+                    _msgDst.nativeOut
+                );
                 status = SwapStatus.Succeeded;
             } else {
                 // handle swap failure, send the received token directly to receiver
@@ -83,7 +101,12 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
             }
         } else {
             // no need to swap, directly send the bridged token to user
-            _sendToken(_dstSwap.path[0], _amount, _msgDst.receiver, _msgDst.nativeOut);
+            _sendToken(
+                _dstSwap.path[0],
+                _amount,
+                _msgDst.receiver,
+                _msgDst.nativeOut
+            );
             dstAmount = _amount;
             status = SwapStatus.Succeeded;
         }
@@ -96,17 +119,30 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
         bytes32 _id,
         SwapRequestDest memory _msgDst
     ) private {
-        require(_token == _msgDst.swap.path[0], "bridged token must be the same as the first token in destination swap path");
+        require(
+            _token == _msgDst.swap.path[0],
+            "bridged token must be the same as the first token in destination swap path"
+        );
 
         uint256 dstAmount;
         SwapStatus status = SwapStatus.Succeeded;
 
-        SwapInfoV2 memory _dstSwap = SwapInfoV2({dex: _msgDst.swap.dex, path: _msgDst.swap.path, deadline: _msgDst.swap.deadline, amountOutMinimum: _msgDst.swap.amountOutMinimum});
+        SwapInfoV2 memory _dstSwap = SwapInfoV2({
+            dex: _msgDst.swap.dex,
+            path: _msgDst.swap.path,
+            deadline: _msgDst.swap.deadline,
+            amountOutMinimum: _msgDst.swap.amountOutMinimum
+        });
         if (_dstSwap.path.length > 1) {
             bool success;
             (success, dstAmount) = _trySwapV2(_dstSwap, _amount);
             if (success) {
-                _sendToken(_dstSwap.path[_dstSwap.path.length - 1], dstAmount, _msgDst.receiver, _msgDst.nativeOut);
+                _sendToken(
+                    _dstSwap.path[_dstSwap.path.length - 1],
+                    dstAmount,
+                    _msgDst.receiver,
+                    _msgDst.nativeOut
+                );
                 status = SwapStatus.Succeeded;
             } else {
                 // handle swap failure, send the received token directly to receiver
@@ -116,7 +152,12 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
             }
         } else {
             // no need to swap, directly send the bridged token to user
-            _sendToken(_dstSwap.path[0], _amount, _msgDst.receiver, _msgDst.nativeOut);
+            _sendToken(
+                _dstSwap.path[0],
+                _amount,
+                _msgDst.receiver,
+                _msgDst.nativeOut
+            );
             dstAmount = _amount;
             status = SwapStatus.Succeeded;
         }
@@ -129,17 +170,30 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
         bytes32 _id,
         SwapRequestDest memory _msgDst
     ) private {
-        require(_token == address(SwapBase._getFirstBytes20(_msgDst.swap.pathV3)), "bridged token must be the same as the first token in destination swap path");
+        require(
+            _token == address(SwapBase._getFirstBytes20(_msgDst.swap.pathV3)),
+            "bridged token must be the same as the first token in destination swap path"
+        );
 
         uint256 dstAmount;
         SwapStatus status = SwapStatus.Succeeded;
 
-        SwapInfoV3 memory _dstSwap = SwapInfoV3({dex: _msgDst.swap.dex, path: _msgDst.swap.pathV3, deadline: _msgDst.swap.deadline, amountOutMinimum: _msgDst.swap.amountOutMinimum});
+        SwapInfoV3 memory _dstSwap = SwapInfoV3({
+            dex: _msgDst.swap.dex,
+            path: _msgDst.swap.pathV3,
+            deadline: _msgDst.swap.deadline,
+            amountOutMinimum: _msgDst.swap.amountOutMinimum
+        });
         if (_dstSwap.path.length > 20) {
             bool success;
             (success, dstAmount) = _trySwapV3(_dstSwap, _amount);
             if (success) {
-                _sendToken(address(SwapBase._getLastBytes20(_dstSwap.path)), dstAmount, _msgDst.receiver, _msgDst.nativeOut);
+                _sendToken(
+                    address(SwapBase._getLastBytes20(_dstSwap.path)),
+                    dstAmount,
+                    _msgDst.receiver,
+                    _msgDst.nativeOut
+                );
                 status = SwapStatus.Succeeded;
             } else {
                 // handle swap failure, send the received token directly to receiver
@@ -149,7 +203,12 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
             }
         } else {
             // no need to swap, directly send the bridged token to user
-            _sendToken(address(SwapBase._getLastBytes20(_dstSwap.path)), _amount, _msgDst.receiver, _msgDst.nativeOut);
+            _sendToken(
+                address(SwapBase._getLastBytes20(_dstSwap.path)),
+                _amount,
+                _msgDst.receiver,
+                _msgDst.nativeOut
+            );
             dstAmount = _amount;
             status = SwapStatus.Succeeded;
         }
@@ -170,9 +229,19 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
     ) external payable override returns (bool) {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
 
-        bytes32 id = SwapBase._computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
+        bytes32 id = SwapBase._computeSwapRequestId(
+            m.receiver,
+            _srcChainId,
+            uint64(block.chainid),
+            _message
+        );
         if (m.swap.version == SwapVersion.v3) {
-            _sendToken(address(_getFirstBytes20(m.swap.pathV3)), _amount, m.receiver, false);
+            _sendToken(
+                address(_getFirstBytes20(m.swap.pathV3)),
+                _amount,
+                m.receiver,
+                false
+            );
         } else {
             _sendToken(m.swap.path[0], _amount, m.receiver, false);
         }
@@ -189,9 +258,19 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
     ) external payable override returns (bool) {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
         if (m.swap.version == SwapVersion.v3) {
-            _sendToken(address(_getLastBytes20(m.swap.pathV3)), _amount, m.receiver, false);
+            _sendToken(
+                address(_getLastBytes20(m.swap.pathV3)),
+                _amount,
+                m.receiver,
+                false
+            );
         } else {
-            _sendToken(m.swap.path[m.swap.path.length - 1], _amount, m.receiver, false);
+            _sendToken(
+                m.swap.path[m.swap.path.length - 1],
+                _amount,
+                m.receiver,
+                false
+            );
         }
 
         return true;
@@ -213,7 +292,6 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
         }
     }
 
-
     function setMinSwapAmount(uint256 _minSwapAmount) external onlyOwner {
         minSwapAmount = _minSwapAmount * 10**decimals;
     }
@@ -227,7 +305,10 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
         decimals = _decimals;
     }
 
-    function setCryptoFee(uint64 _networkID, uint256 _amount) external onlyOwner {
+    function setCryptoFee(uint64 _networkID, uint256 _amount)
+        external
+        onlyOwner
+    {
         dstCryptoFee[_networkID] = _amount;
     }
 
@@ -242,5 +323,4 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
     function setNativeWrap(address _nativeWrap) external onlyOwner {
         nativeWrap = _nativeWrap;
     }
-
 }

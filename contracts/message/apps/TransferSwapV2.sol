@@ -6,7 +6,6 @@ import "./SwapBase.sol";
 import "../../interfaces/IWETH.sol";
 import "../../interfaces/IUniswapV2.sol";
 
-
 contract TransferSwapV2 is SwapBase {
     using SafeERC20 for IERC20;
 
@@ -20,7 +19,12 @@ contract TransferSwapV2 is SwapBase {
         address tokenOut
     );
 
-    event SwapRequestSentV2(bytes32 id, uint64 dstChainId, uint256 srcAmount, address srcToken);
+    event SwapRequestSentV2(
+        bytes32 id,
+        uint64 dstChainId,
+        uint256 srcAmount,
+        address srcToken
+    );
 
     function transferWithSwapV2Native(
         address _receiver,
@@ -58,7 +62,11 @@ contract TransferSwapV2 is SwapBase {
         uint64 _nonce,
         bool _nativeOut
     ) external payable onlyEOA {
-        IERC20(_srcSwap.path[0]).safeTransferFrom(msg.sender, address(this), _amountIn);
+        IERC20(_srcSwap.path[0]).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _amountIn
+        );
         _transferWithSwapV2(
             _receiver,
             _amountIn,
@@ -99,7 +107,10 @@ contract TransferSwapV2 is SwapBase {
     ) private {
         uint64 chainId = uint64(block.chainid);
 
-        require(_srcSwap.path.length > 1 && _dstChainId != chainId, "empty src swap path or same chain id");
+        require(
+            _srcSwap.path.length > 1 && _dstChainId != chainId,
+            "empty src swap path or same chain id"
+        );
 
         address srcTokenOut = _srcSwap.path[_srcSwap.path.length - 1];
         uint256 srcAmtOut = _amountIn;
@@ -111,21 +122,24 @@ contract TransferSwapV2 is SwapBase {
             if (!success) revert("src swap failed");
         }
 
-        require(srcAmtOut >= minSwapAmount, "amount must be greater than min swap amount");
+        require(
+            srcAmtOut >= minSwapAmount,
+            "amount must be greater than min swap amount"
+        );
 
         _crossChainTransferWithSwapV2(
-                _receiver,
-                _amountIn,
-                chainId,
-                _dstChainId,
-                _srcSwap,
-                _dstSwap,
-                _maxBridgeSlippage,
-                _nonce,
-                _nativeOut,
-                _fee,
-                srcTokenOut,
-                srcAmtOut
+            _receiver,
+            _amountIn,
+            chainId,
+            _dstChainId,
+            _srcSwap,
+            _dstSwap,
+            _maxBridgeSlippage,
+            _nonce,
+            _nativeOut,
+            _fee,
+            srcTokenOut,
+            srcAmtOut
         );
     }
 
@@ -141,8 +155,17 @@ contract TransferSwapV2 is SwapBase {
         // no need to bridge, directly send the tokens to user
         IERC20(srcTokenOut).safeTransfer(_receiver, srcAmtOut);
         // use uint64 for chainid to be consistent with other components in the system
-        bytes32 id = keccak256(abi.encode(msg.sender, _chainId, _receiver, _nonce, _srcSwap));
-        emit DirectSwapV2(id, _chainId, _amountIn, _srcSwap.path[0], srcAmtOut, srcTokenOut);
+        bytes32 id = keccak256(
+            abi.encode(msg.sender, _chainId, _receiver, _nonce, _srcSwap)
+        );
+        emit DirectSwapV2(
+            id,
+            _chainId,
+            _amountIn,
+            _srcSwap.path[0],
+            srcAmtOut,
+            srcTokenOut
+        );
     }
 
     function _crossChainTransferWithSwapV2(
@@ -161,9 +184,19 @@ contract TransferSwapV2 is SwapBase {
     ) private {
         require(_dstSwap.path.length > 0, "empty dst swap path");
         bytes memory message = abi.encode(
-            SwapRequestDest({swap: _dstSwap, receiver: msg.sender, nonce: _nonce, nativeOut: _nativeOut})
+            SwapRequestDest({
+                swap: _dstSwap,
+                receiver: msg.sender,
+                nonce: _nonce,
+                nativeOut: _nativeOut
+            })
         );
-        bytes32 id = SwapBase._computeSwapRequestId(msg.sender, _chainId, _dstChainId, message);
+        bytes32 id = SwapBase._computeSwapRequestId(
+            msg.sender,
+            _chainId,
+            _dstChainId,
+            message
+        );
         // bridge the intermediate token to destination chain along with the message
         // NOTE In production, it's better use a per-user per-transaction nonce so that it's less likely transferId collision
         // would happen at Bridge contract. Currently this nonce is a timestamp supplied by frontend
@@ -202,13 +235,17 @@ contract TransferSwapV2 is SwapBase {
             MessageSenderLib.BridgeType.Liquidity,
             _fee - dstCryptoFee[_dstChainId]
         );
-     }
+    }
 
-    function _trySwapV2(SwapInfoV2 memory _swap, uint256 _amount) internal returns (bool ok, uint256 amountOut) {
+    function _trySwapV2(SwapInfoV2 memory _swap, uint256 _amount)
+        internal
+        returns (bool ok, uint256 amountOut)
+    {
         uint256 zero;
+        /*
         if (!supportedDex[_swap.dex]) {
             return (false, zero);
-        }
+        }*/
         IERC20(_swap.path[0]).safeIncreaseAllowance(_swap.dex, _amount);
         try
             IUniswapV2(_swap.dex).swapExactTokensForTokens(
@@ -224,5 +261,4 @@ contract TransferSwapV2 is SwapBase {
             return (false, zero);
         }
     }
-
 }

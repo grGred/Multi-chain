@@ -115,11 +115,25 @@ contract MessageBusReceiver is Ownable {
         // in order to guarantee that each transfer can only be used once.
         // This also indicates that different transfers can carry the exact same messages.
         bytes32 messageId = verifyTransfer(_transfer);
-        require(executedMessages[messageId] == TxStatus.Null, "transfer already executed");
+        require(
+            executedMessages[messageId] == TxStatus.Null,
+            "transfer already executed"
+        );
         executedMessages[messageId] = TxStatus.Pending;
 
-        bytes32 domain = keccak256(abi.encodePacked(block.chainid, address(this), "MessageWithTransfer"));
-        IBridge(liquidityBridge).verifySigs(abi.encodePacked(domain, messageId, _message), _sigs, _signers, _powers);
+        bytes32 domain = keccak256(
+            abi.encodePacked(
+                block.chainid,
+                address(this),
+                "MessageWithTransfer"
+            )
+        );
+        IBridge(liquidityBridge).verifySigs(
+            abi.encodePacked(domain, messageId, _message),
+            _sigs,
+            _signers,
+            _powers
+        );
         TxStatus status;
         bool success = executeMessageWithTransfer(_transfer, _message);
         if (success) {
@@ -154,11 +168,25 @@ contract MessageBusReceiver is Ownable {
     ) external payable {
         // similar to executeMessageWithTransfer
         bytes32 messageId = verifyTransfer(_transfer);
-        require(executedMessages[messageId] == TxStatus.Null, "transfer already executed");
+        require(
+            executedMessages[messageId] == TxStatus.Null,
+            "transfer already executed"
+        );
         executedMessages[messageId] = TxStatus.Pending;
 
-        bytes32 domain = keccak256(abi.encodePacked(block.chainid, address(this), "MessageWithTransferRefund"));
-        IBridge(liquidityBridge).verifySigs(abi.encodePacked(domain, messageId, _message), _sigs, _signers, _powers);
+        bytes32 domain = keccak256(
+            abi.encodePacked(
+                block.chainid,
+                address(this),
+                "MessageWithTransferRefund"
+            )
+        );
+        IBridge(liquidityBridge).verifySigs(
+            abi.encodePacked(domain, messageId, _message),
+            _sigs,
+            _signers,
+            _powers
+        );
         TxStatus status;
         bool success = executeMessageWithTransferRefund(_transfer, _message);
         if (success) {
@@ -188,11 +216,21 @@ contract MessageBusReceiver is Ownable {
         // For message without associated token transfer, message Id is computed through message info,
         // in order to guarantee that each message can only be applied once
         bytes32 messageId = computeMessageOnlyId(_route, _message);
-        require(executedMessages[messageId] == TxStatus.Null, "message already executed");
+        require(
+            executedMessages[messageId] == TxStatus.Null,
+            "message already executed"
+        );
         executedMessages[messageId] = TxStatus.Pending;
 
-        bytes32 domain = keccak256(abi.encodePacked(block.chainid, address(this), "Message"));
-        IBridge(liquidityBridge).verifySigs(abi.encodePacked(domain, messageId), _sigs, _signers, _powers);
+        bytes32 domain = keccak256(
+            abi.encodePacked(block.chainid, address(this), "Message")
+        );
+        IBridge(liquidityBridge).verifySigs(
+            abi.encodePacked(domain, messageId),
+            _sigs,
+            _signers,
+            _powers
+        );
         TxStatus status;
         bool success = executeMessage(_route, _message);
         if (success) {
@@ -206,11 +244,13 @@ contract MessageBusReceiver is Ownable {
 
     // ================= utils (to avoid stack too deep) =================
 
-    function executeMessageWithTransfer(TransferInfo calldata _transfer, bytes calldata _message)
-        private
-        returns (bool)
-    {
-        (bool ok, bytes memory res) = address(_transfer.receiver).call{value: msg.value}(
+    function executeMessageWithTransfer(
+        TransferInfo calldata _transfer,
+        bytes calldata _message
+    ) private returns (bool) {
+        (bool ok, bytes memory res) = address(_transfer.receiver).call{
+            value: msg.value
+        }(
             abi.encodeWithSelector(
                 IMessageReceiverApp.executeMessageWithTransfer.selector,
                 _transfer.sender,
@@ -227,11 +267,13 @@ contract MessageBusReceiver is Ownable {
         return false;
     }
 
-    function executeMessageWithTransferFallback(TransferInfo calldata _transfer, bytes calldata _message)
-        private
-        returns (bool)
-    {
-        (bool ok, bytes memory res) = address(_transfer.receiver).call{value: msg.value}(
+    function executeMessageWithTransferFallback(
+        TransferInfo calldata _transfer,
+        bytes calldata _message
+    ) private returns (bool) {
+        (bool ok, bytes memory res) = address(_transfer.receiver).call{
+            value: msg.value
+        }(
             abi.encodeWithSelector(
                 IMessageReceiverApp.executeMessageWithTransferFallback.selector,
                 _transfer.sender,
@@ -248,11 +290,13 @@ contract MessageBusReceiver is Ownable {
         return false;
     }
 
-    function executeMessageWithTransferRefund(TransferInfo calldata _transfer, bytes calldata _message)
-        private
-        returns (bool)
-    {
-        (bool ok, bytes memory res) = address(_transfer.receiver).call{value: msg.value}(
+    function executeMessageWithTransferRefund(
+        TransferInfo calldata _transfer,
+        bytes calldata _message
+    ) private returns (bool) {
+        (bool ok, bytes memory res) = address(_transfer.receiver).call{
+            value: msg.value
+        }(
             abi.encodeWithSelector(
                 IMessageReceiverApp.executeMessageWithTransferRefund.selector,
                 _transfer.token,
@@ -267,7 +311,11 @@ contract MessageBusReceiver is Ownable {
         return false;
     }
 
-    function verifyTransfer(TransferInfo calldata _transfer) private view returns (bytes32) {
+    function verifyTransfer(TransferInfo calldata _transfer)
+        private
+        view
+        returns (bytes32)
+    {
         bytes32 transferId;
         address bridgeAddr;
         if (_transfer.t == TransferType.LqSend) {
@@ -283,7 +331,10 @@ contract MessageBusReceiver is Ownable {
                 )
             );
             bridgeAddr = liquidityBridge;
-            require(IBridge(bridgeAddr).transfers(transferId) == true, "bridge relay not exist");
+            require(
+                IBridge(bridgeAddr).transfers(transferId) == true,
+                "bridge relay not exist"
+            );
         } else if (_transfer.t == TransferType.LqWithdraw) {
             transferId = keccak256(
                 abi.encodePacked(
@@ -295,8 +346,14 @@ contract MessageBusReceiver is Ownable {
                 )
             );
             bridgeAddr = liquidityBridge;
-            require(IBridge(bridgeAddr).withdraws(transferId) == true, "bridge withdraw not exist");
-        } else if (_transfer.t == TransferType.PegMint || _transfer.t == TransferType.PegWithdraw) {
+            require(
+                IBridge(bridgeAddr).withdraws(transferId) == true,
+                "bridge withdraw not exist"
+            );
+        } else if (
+            _transfer.t == TransferType.PegMint ||
+            _transfer.t == TransferType.PegWithdraw
+        ) {
             transferId = keccak256(
                 abi.encodePacked(
                     _transfer.receiver,
@@ -309,13 +366,22 @@ contract MessageBusReceiver is Ownable {
             );
             if (_transfer.t == TransferType.PegMint) {
                 bridgeAddr = pegBridge;
-                require(IPeggedTokenBridge(bridgeAddr).records(transferId) == true, "mint record not exist");
+                require(
+                    IPeggedTokenBridge(bridgeAddr).records(transferId) == true,
+                    "mint record not exist"
+                );
             } else {
                 // _transfer.t == TransferType.PegWithdraw
                 bridgeAddr = pegVault;
-                require(IOriginalTokenVault(bridgeAddr).records(transferId) == true, "withdraw record not exist");
+                require(
+                    IOriginalTokenVault(bridgeAddr).records(transferId) == true,
+                    "withdraw record not exist"
+                );
             }
-        } else if (_transfer.t == TransferType.PegMintV2 || _transfer.t == TransferType.PegWithdrawV2) {
+        } else if (
+            _transfer.t == TransferType.PegMintV2 ||
+            _transfer.t == TransferType.PegWithdrawV2
+        ) {
             if (_transfer.t == TransferType.PegMintV2) {
                 bridgeAddr = pegBridgeV2;
             } else {
@@ -334,24 +400,53 @@ contract MessageBusReceiver is Ownable {
                 )
             );
             if (_transfer.t == TransferType.PegMintV2) {
-                require(IPeggedTokenBridgeV2(bridgeAddr).records(transferId) == true, "mint record not exist");
+                require(
+                    IPeggedTokenBridgeV2(bridgeAddr).records(transferId) ==
+                        true,
+                    "mint record not exist"
+                );
             } else {
                 // TransferType.PegWithdrawV2
-                require(IOriginalTokenVaultV2(bridgeAddr).records(transferId) == true, "withdraw record not exist");
+                require(
+                    IOriginalTokenVaultV2(bridgeAddr).records(transferId) ==
+                        true,
+                    "withdraw record not exist"
+                );
             }
         }
-        return keccak256(abi.encodePacked(MsgType.MessageWithTransfer, bridgeAddr, transferId));
-    }
-
-    function computeMessageOnlyId(RouteInfo calldata _route, bytes calldata _message) private pure returns (bytes32) {
         return
             keccak256(
-                abi.encodePacked(MsgType.MessageOnly, _route.sender, _route.receiver, _route.srcChainId, _message)
+                abi.encodePacked(
+                    MsgType.MessageWithTransfer,
+                    bridgeAddr,
+                    transferId
+                )
             );
     }
 
-    function executeMessage(RouteInfo calldata _route, bytes calldata _message) private returns (bool) {
-        (bool ok, bytes memory res) = address(_route.receiver).call{value: msg.value}(
+    function computeMessageOnlyId(
+        RouteInfo calldata _route,
+        bytes calldata _message
+    ) private pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    MsgType.MessageOnly,
+                    _route.sender,
+                    _route.receiver,
+                    _route.srcChainId,
+                    _message
+                )
+            );
+    }
+
+    function executeMessage(RouteInfo calldata _route, bytes calldata _message)
+        private
+        returns (bool)
+    {
+        (bool ok, bytes memory res) = address(_route.receiver).call{
+            value: msg.value
+        }(
             abi.encodeWithSelector(
                 IMessageReceiverApp.executeMessage.selector,
                 _route.sender,

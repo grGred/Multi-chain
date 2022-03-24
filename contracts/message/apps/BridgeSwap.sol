@@ -7,7 +7,12 @@ import "./SwapBase.sol";
 contract TransferSwapV2 is SwapBase {
     using SafeERC20 for IERC20;
 
-    event BridgeRequestSent(bytes32 id, uint64 dstChainId, uint256 srcAmount, address srcToken);
+    event BridgeRequestSent(
+        bytes32 id,
+        uint64 dstChainId,
+        uint256 srcAmount,
+        address srcToken
+    );
 
     function bridgeWithSwap(
         address _receiver,
@@ -20,7 +25,11 @@ contract TransferSwapV2 is SwapBase {
         bool _nativeOut
     ) external payable onlyEOA {
         // require(tokensForBridging.contains(_srcBridgeToken));
-        IERC20(_srcBridgeToken).safeTransferFrom(msg.sender, address(this), _amountIn);
+        IERC20(_srcBridgeToken).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _amountIn
+        );
         _crossChainBridgeWithSwap(
             _receiver,
             _amountIn,
@@ -47,12 +56,25 @@ contract TransferSwapV2 is SwapBase {
     ) private {
         uint64 _chainId = uint64(block.chainid);
         require(_dstChainId != _chainId, "same chain id");
-        require(_amountIn >= minSwapAmount, "amount must be greater than min swap amount");
+        require(
+            _amountIn >= minSwapAmount,
+            "amount must be greater than min swap amount"
+        );
         require(_dstSwap.path.length > 0, "empty dst swap path");
         bytes memory message = abi.encode(
-            SwapRequestDest({swap: _dstSwap, receiver: msg.sender, nonce: _nonce, nativeOut: _nativeOut})
+            SwapRequestDest({
+                swap: _dstSwap,
+                receiver: msg.sender,
+                nonce: _nonce,
+                nativeOut: _nativeOut
+            })
         );
-        bytes32 id = SwapBase._computeSwapRequestId(msg.sender, _chainId, _dstChainId, message);
+        bytes32 id = SwapBase._computeSwapRequestId(
+            msg.sender,
+            _chainId,
+            _dstChainId,
+            message
+        );
         // bridge the intermediate token to destination chain along with the message
         // NOTE In production, it's better use a per-user per-transaction nonce so that it's less likely transferId collision
         // would happen at Bridge contract. Currently this nonce is a timestamp supplied by frontend
@@ -91,6 +113,5 @@ contract TransferSwapV2 is SwapBase {
             MessageSenderLib.BridgeType.Liquidity,
             _fee - dstCryptoFee[_dstChainId]
         );
-     }
-
+    }
 }
