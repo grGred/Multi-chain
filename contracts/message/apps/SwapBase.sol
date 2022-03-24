@@ -66,6 +66,7 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
         uint256 amountOutMinimum;
         SwapVersion version; // identifies swap type
     }
+    // TODO bytes pathV3 can be used for inch message
 
     struct SwapRequestDest {
         SwapInfoDest swap;
@@ -77,7 +78,8 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
     enum SwapVersion {
         inch,
         v2,
-        v3
+        v3,
+        bridge
     }
 
     enum SwapStatus {
