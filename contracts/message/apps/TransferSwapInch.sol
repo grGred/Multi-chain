@@ -105,15 +105,14 @@ contract TransferSwapInch is SwapBase {
         bool _nativeOut,
         uint256 _fee
     ) private {
-        require(_srcSwap.path.length > 0, "empty src swap path");
-        address srcTokenOut = _srcSwap.path[_srcSwap.path.length - 1];
-
         uint64 chainId = uint64(block.chainid);
-        require(
-            _srcSwap.path.length > 1 || _dstChainId != chainId,
-            "noop is not allowed"
-        ); // revert early to save gas
 
+        require(
+            _srcSwap.path.length > 1 && _dstChainId != chainId,
+            "empty src swap path or same chain id"
+        );
+
+        address srcTokenOut = _srcSwap.path[_srcSwap.path.length - 1];
         uint256 srcAmtOut = _amountIn;
 
         // swap source token for intermediate token on the source DEX
@@ -132,18 +131,7 @@ contract TransferSwapInch is SwapBase {
             "amount must be greater than min swap amount"
         );
 
-        if (_dstChainId == chainId) {
-            _directSendInch(
-                _receiver,
-                _amountIn,
-                chainId,
-                _srcSwap,
-                _nonce,
-                srcTokenOut,
-                srcAmtOut
-            );
-        } else {
-            _crossChainTransferWithSwapInch(
+        _crossChainTransferWithSwapInch(
                 _receiver,
                 _amountIn,
                 chainId,
@@ -156,8 +144,7 @@ contract TransferSwapInch is SwapBase {
                 _fee,
                 srcTokenOut,
                 srcAmtOut
-            );
-        }
+        );
     }
 
     function _directSendInch(
@@ -214,9 +201,6 @@ contract TransferSwapInch is SwapBase {
             _dstChainId,
             message
         );
-        // bridge the intermediate token to destination chain along with the message
-        // NOTE In production, it's better use a per-user per-transaction nonce so that it's less likely transferId collision
-        // would happen at Bridge contract. Currently this nonce is a timestamp supplied by frontend
         _sendMessageWithTransferInch(
             _receiver,
             srcTokenOut,

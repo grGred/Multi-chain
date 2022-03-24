@@ -19,7 +19,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
         supportedDex[_supportedDex] = true;
         nativeWrap = _nativeWrap;
         dstCryptoFee[43114] = 10000000;
-        minSwapAmount = 8 * 10**decimals; // * decimals are changeable
+        // minSwapAmount[bridgeToken] = 8 * 10**decimals;
         feeRubic = 160000; // 0.16%
     }
 
@@ -33,7 +33,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
      * @param _message SwapRequestV2 message that defines the swap behavior on this destination chain
      */
     function executeMessageWithTransfer(
-        address, // _sender
+        address,
         address _token,
         uint256 _amount,
         uint64 _srcChainId,

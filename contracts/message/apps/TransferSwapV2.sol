@@ -197,9 +197,6 @@ contract TransferSwapV2 is SwapBase {
             _dstChainId,
             message
         );
-        // bridge the intermediate token to destination chain along with the message
-        // NOTE In production, it's better use a per-user per-transaction nonce so that it's less likely transferId collision
-        // would happen at Bridge contract. Currently this nonce is a timestamp supplied by frontend
         _sendMessageWithTransferV2(
             _receiver,
             srcTokenOut,

@@ -108,15 +108,14 @@ contract TransferSwapV3 is SwapBase {
         bool _nativeOut,
         uint256 _fee
     ) private {
-        require(_srcSwap.path.length > 0, "empty src swap path");
-        address srcTokenOut = address(_getLastBytes20(_srcSwap.path));
-
         uint64 chainId = uint64(block.chainid);
-        require(
-            _srcSwap.path.length > 20 || _dstChainId != chainId,
-            "noop is not allowed"
-        ); // revert early to save gas
 
+        require(
+            _srcSwap.path.length > 20 && _dstChainId != chainId,
+            "empty src swap path or same chain id"
+        );
+
+        address srcTokenOut = address(_getLastBytes20(_srcSwap.path));
         uint256 srcAmtOut = _amountIn;
 
         // swap source token for intermediate token on the source DEX
@@ -131,18 +130,7 @@ contract TransferSwapV3 is SwapBase {
             "amount must be greater than min swap amount"
         );
 
-        if (_dstChainId == chainId) {
-            _directSendV3(
-                _receiver,
-                _amountIn,
-                chainId,
-                _srcSwap,
-                _nonce,
-                srcTokenOut,
-                srcAmtOut
-            );
-        } else {
-            _crossChainTransferWithSwapV3(
+        _crossChainTransferWithSwapV3(
                 _receiver,
                 _amountIn,
                 chainId,
@@ -155,8 +143,7 @@ contract TransferSwapV3 is SwapBase {
                 _fee,
                 srcTokenOut,
                 srcAmtOut
-            );
-        }
+        );
     }
 
     function _directSendV3(
@@ -263,9 +250,10 @@ contract TransferSwapV3 is SwapBase {
         returns (bool ok, uint256 amountOut)
     {
         uint256 zero;
+        /*
         if (!supportedDex[_swap.dex]) {
             return (false, zero);
-        }
+        }*/
         IERC20(address(_getFirstBytes20(_swap.path))).safeIncreaseAllowance(
             _swap.dex,
             _amount
@@ -279,6 +267,7 @@ contract TransferSwapV3 is SwapBase {
                 _amount,
                 _swap.amountOutMinimum
             );
+
         try IUniswapRouterV3(_swap.dex).exactInput(paramsV3) returns (
             uint256 _amountOut
         ) {
