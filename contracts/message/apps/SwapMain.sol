@@ -5,6 +5,7 @@ pragma solidity >=0.8.9;
 import "./TransferSwapV2.sol";
 import "./TransferSwapV3.sol";
 import "./TransferSwapInch.sol";
+import "./BridgeSwap.sol";
 
 contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
     using SafeERC20 for IERC20;
