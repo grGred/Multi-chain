@@ -10,7 +10,7 @@ contract TransferSwapInch is SwapBase {
     using SafeERC20 for IERC20;
 
     // emitted when requested dstChainId == srcChainId, no bridging
-    event DirectSwap(
+    event DirectSwapInch(
         bytes32 id,
         uint64 srcChainId,
         uint256 amountIn,
@@ -20,7 +20,6 @@ contract TransferSwapInch is SwapBase {
     );
 
     event SwapRequestSentInch(bytes32 id, uint64 dstChainId, uint256 srcAmount, address srcToken);
-    event SwapRequestDone(bytes32 id, uint256 dstAmount, SwapStatus status);
 
     function transferWithSwapInchNative(
         address _receiver,  // transfer swap contract in dst chain
@@ -151,7 +150,7 @@ contract TransferSwapInch is SwapBase {
         IERC20(srcTokenOut).safeTransfer(_receiver, srcAmtOut);
         // use uint64 for chainid to be consistent with other components in the system
         bytes32 id = keccak256(abi.encode(msg.sender, _chainId, _receiver, _nonce, _srcSwap));
-        emit DirectSwap(id, _chainId, _amountIn, _srcSwap.path[0], srcAmtOut, srcTokenOut);
+        emit DirectSwapInch(id, _chainId, _amountIn, _srcSwap.path[0], srcAmtOut, srcTokenOut);
     }
 
     function _crossChainTransferWithSwapInch(

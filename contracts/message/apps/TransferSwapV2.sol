@@ -21,7 +21,6 @@ contract TransferSwapV2 is SwapBase {
     );
 
     event SwapRequestSentV2(bytes32 id, uint64 dstChainId, uint256 srcAmount, address srcToken);
-    event SwapRequestDoneV2(bytes32 id, uint256 dstAmount, SwapStatus status);
 
     function transferWithSwapV2Native(
         address _receiver,
@@ -49,7 +48,6 @@ contract TransferSwapV2 is SwapBase {
         );
     }
 
-    // you cant recive native from not native token
     function transferWithSwapV2(
         address _receiver,
         uint256 _amountIn,
@@ -99,12 +97,11 @@ contract TransferSwapV2 is SwapBase {
         bool _nativeOut,
         uint256 _fee
     ) private {
-        require(_srcSwap.path.length > 0, "empty src swap path");
-        address srcTokenOut = _srcSwap.path[_srcSwap.path.length - 1];
-
         uint64 chainId = uint64(block.chainid);
-        require(_srcSwap.path.length > 1 || _dstChainId != chainId, "noop is not allowed"); // revert early to save gas
 
+        require(_srcSwap.path.length > 1 && _dstChainId != chainId, "empty src swap path or same chain id");
+
+        address srcTokenOut = _srcSwap.path[_srcSwap.path.length - 1];
         uint256 srcAmtOut = _amountIn;
 
         // swap source token for intermediate token on the source DEX
@@ -116,10 +113,7 @@ contract TransferSwapV2 is SwapBase {
 
         require(srcAmtOut >= minSwapAmount, "amount must be greater than min swap amount");
 
-        if (_dstChainId == chainId) {
-            _directSendV2(_receiver, _amountIn, chainId, _srcSwap, _nonce, srcTokenOut, srcAmtOut);
-        } else {
-            _crossChainTransferWithSwapV2(
+        _crossChainTransferWithSwapV2(
                 _receiver,
                 _amountIn,
                 chainId,
@@ -132,8 +126,7 @@ contract TransferSwapV2 is SwapBase {
                 _fee,
                 srcTokenOut,
                 srcAmtOut
-            );
-        }
+        );
     }
 
     function _directSendV2(

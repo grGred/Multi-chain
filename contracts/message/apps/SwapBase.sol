@@ -26,7 +26,7 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
         _;
     }
 
-    // ============== structs for V2 like dexes ==============
+    // ============== struct for V2 like dexes ==============
 
     struct SwapInfoV2 {
         address dex; // the DEX to use for the swap
@@ -37,19 +37,7 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
         uint256 amountOutMinimum; // minimum receive amount for the swap
     }
 
-    struct SwapRequestV2 {
-        SwapInfoV2 swap;
-        // the receiving party (the user) of the final output token
-        address receiver;
-        // this field is best to be per-user per-transaction unique so that
-        // a nonce that is specified by the calling party (the user),
-        uint64 nonce;
-        // indicates whether the output token coming out of the swap on destination
-        // chain should be unwrapped before sending to the user
-        bool nativeOut;
-    }
-
-    // ============== structs for V3 like dexes ==============
+    // ============== struct for V3 like dexes ==============
 
     struct SwapInfoV3 {
         address dex; // the DEX to use for the swap
@@ -58,14 +46,7 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
         uint256 amountOutMinimum;
     }
 
-    struct SwapRequestV3 {
-        SwapInfoV3 swap;
-        address receiver; // EOA
-        uint64 nonce;
-        bool nativeOut;
-    }
-
-    // ============== structs for inch ==============
+    // ============== struct for inch swap ==============
 
     struct SwapInfoInch {
         address dex;
@@ -75,20 +56,13 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
         uint256 amountOutMinimum;
     }
 
-    struct SwapRequestInch {
-        SwapInfoInch swap;
-        address receiver; // EOA
-        uint64 nonce;
-        bool nativeOut;
-    }
-
     // ============== struct dstSwap ==============
     // This is needed to make v2 -> SGN -> v3 swaps and etc.
 
     struct SwapInfoDest {
         address dex;  // dex address
         address[] path; // path address for v2 and inch
-        bytes pathV3; // path address for v3 TODO: change for address[]
+        bytes pathV3; // path address for v3
         uint256 deadline; // for v2 and v3
         bytes data; // for inch only
         uint256 amountOutMinimum;

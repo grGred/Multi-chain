@@ -8,6 +8,7 @@ import "./TransferSwapInch.sol";
 
 contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
     using SafeERC20 for IERC20;
+    event SwapRequestDone(bytes32 id, uint256 dstAmount, SwapStatus status);
 
     constructor(
         address _messageBus,
@@ -37,7 +38,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
         uint256 _amount,
         uint64 _srcChainId,
         bytes memory _message
-    ) external payable onlyMessageBus override returns (bool) {
+    ) external payable override returns (bool) {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
         bytes32 id = SwapBase._computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
         if (m.swap.version == SwapVersion.v3) {
@@ -166,7 +167,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
         uint256 _amount,
         uint64 _srcChainId,
         bytes memory _message
-    ) external payable override onlyMessageBus returns (bool) {
+    ) external payable override returns (bool) {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
 
         bytes32 id = SwapBase._computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
@@ -185,7 +186,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch {
         address,
         uint256 _amount,
         bytes calldata _message
-    ) external payable override onlyMessageBus returns (bool) {
+    ) external payable override returns (bool) {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
         if (m.swap.version == SwapVersion.v3) {
             _sendToken(address(_getLastBytes20(m.swap.pathV3)), _amount, m.receiver, false);
