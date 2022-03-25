@@ -62,14 +62,12 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
 
     struct SwapInfoDest {
         address dex; // dex address
-        address[] path; // path address for v2 and inch
-        bytes pathV3; // path address for v3
-        uint256 deadline; // for v2 and v3
-        bytes data; // for inch only
-        uint256 amountOutMinimum;
         SwapVersion version; // identifies swap type
+        address[] path; // path address for v2 and inch
+        bytes dataInchOrPathV3; // path address for v3
+        uint256 deadline; // for v2 and v3
+        uint256 amountOutMinimum;
     }
-    // TODO bytes pathV3 can be used for inch message
 
     struct SwapRequestDest {
         SwapInfoDest swap;

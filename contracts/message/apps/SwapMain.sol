@@ -62,6 +62,66 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         return true;
     }
 
+        /**
+     * @notice called by MessageBus when the executeMessageWithTransfer call fails. does nothing but emitting a "fail" event
+     * @param _srcChainId source chain ID
+     * @param _message SwapRequestDest message that defines the swap behavior on this destination chain
+     */
+    function executeMessageWithTransferFallback(
+        address, // _sender (executor)
+        address _token,
+        uint256 _amount,
+        uint64 _srcChainId,
+        bytes memory _message
+    ) external payable override returns (bool) {
+        SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
+
+        bytes32 id = _computeSwapRequestId(
+            m.receiver,
+            _srcChainId,
+            uint64(block.chainid),
+            _message
+        );
+        if (m.swap.version == SwapVersion.v3) {
+            _sendToken(
+                _token,
+                _amount,
+                m.receiver,
+                m.nativeOut
+            );
+        } else {
+            _sendToken(_token, _amount, m.receiver, m.nativeOut);
+        }
+        emit SwapRequestDone(id, 0, SwapStatus.Failed);
+        // always return false to mark this transfer as failed since if this function is called then there nothing more
+        // we can do in this app as the swap failures are already handled in executeMessageWithTransfer
+        return false;
+    }
+
+    function executeMessageWithTransferRefund(
+        address _token,
+        uint256 _amount,
+        bytes calldata _message
+    ) external payable override returns (bool) {
+        SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
+        if (m.swap.version == SwapVersion.v3) {
+            _sendToken(
+                _token,
+                _amount,
+                m.receiver,
+                m.nativeOut
+            );
+        } else {
+            _sendToken(
+                m.swap.path[m.swap.path.length - 1],
+                _amount,
+                m.receiver,
+                m.nativeOut
+            );
+        }
+        return true;
+    }
+
     function _executeDstSwapInch(
         address _token,
         uint256 _amount,
@@ -80,7 +140,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         SwapInfoInch memory _dstSwap = SwapInfoInch({
             dex: _msgDst.swap.dex,
             path: _msgDst.swap.path,
-            data: _msgDst.swap.data,
+            data: _msgDst.swap.dataInchOrPathV3,
             amountOutMinimum: _msgDst.swap.amountOutMinimum
         });
 
@@ -184,17 +244,17 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         SwapRequestDest memory _msgDst
     ) private {
         require(
-            _token == address(_getFirstBytes20(_msgDst.swap.pathV3)),
+            _token == address(_getFirstBytes20(_msgDst.swap.dataInchOrPathV3)),
             "bridged token must be the same as the first token in destination swap path"
         );
-        require(_msgDst.swap.pathV3.length > 20, "dst swap expected");
+        require(_msgDst.swap.dataInchOrPathV3.length > 20, "dst swap expected");
 
         uint256 dstAmount;
         SwapStatus status = SwapStatus.Succeeded;
 
         SwapInfoV3 memory _dstSwap = SwapInfoV3({
             dex: _msgDst.swap.dex,
-            path: _msgDst.swap.pathV3,
+            path: _msgDst.swap.dataInchOrPathV3,
             deadline: _msgDst.swap.deadline,
             amountOutMinimum: _msgDst.swap.amountOutMinimum
         });
@@ -217,67 +277,6 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         }
 
         emit SwapRequestDone(_id, dstAmount, status);
-    }
-
-    /**
-     * @notice called by MessageBus when the executeMessageWithTransfer call fails. does nothing but emitting a "fail" event
-     * @param _srcChainId source chain ID
-     * @param _message SwapRequestDest message that defines the swap behavior on this destination chain
-     */
-    function executeMessageWithTransferFallback(
-        address, // _sender (executor)
-        address,
-        uint256 _amount,
-        uint64 _srcChainId,
-        bytes memory _message
-    ) external payable override returns (bool) {
-        SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
-
-        bytes32 id = _computeSwapRequestId(
-            m.receiver,
-            _srcChainId,
-            uint64(block.chainid),
-            _message
-        );
-        if (m.swap.version == SwapVersion.v3) {
-            _sendToken(
-                address(_getFirstBytes20(m.swap.pathV3)),
-                _amount,
-                m.receiver,
-                false
-            );
-        } else {
-            _sendToken(m.swap.path[0], _amount, m.receiver, false);
-        }
-        emit SwapRequestDone(id, 0, SwapStatus.Failed);
-        // always return false to mark this transfer as failed since if this function is called then there nothing more
-        // we can do in this app as the swap failures are already handled in executeMessageWithTransfer
-        return false;
-    }
-
-    function executeMessageWithTransferRefund(
-        address,
-        uint256 _amount,
-        bytes calldata _message
-    ) external payable override returns (bool) {
-        SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
-        if (m.swap.version == SwapVersion.v3) {
-            _sendToken(
-                address(_getLastBytes20(m.swap.pathV3)),
-                _amount,
-                m.receiver,
-                false
-            );
-        } else {
-            _sendToken(
-                m.swap.path[m.swap.path.length - 1],
-                _amount,
-                m.receiver,
-                false
-            );
-        }
-
-        return true;
     }
 
     function _sendToken(
@@ -324,7 +323,6 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
     function sweepTokens(IERC20 token) external onlyOwner {
         token.transfer(msg.sender, token.balanceOf(address(this)));
     }
-    // TODO comission must be represnted with code
 
     function setNativeWrap(address _nativeWrap) external onlyOwner {
         nativeWrap = _nativeWrap;
