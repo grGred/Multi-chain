@@ -7,13 +7,16 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../framework/MessageBusAddress.sol";
 import "../framework/MessageSenderApp.sol";
 import "../framework/MessageReceiverApp.sol";
+import "../../interfaces/IWETH.sol";
 
 contract SwapBase is MessageSenderApp, MessageReceiverApp {
+    using SafeERC20 for IERC20;
     mapping(address => bool) supportedDex;
     mapping(uint64 => uint256) public dstCryptoFee;
 
     // erc20 wrap of gas token of this chain, eg. WETH
     address public nativeWrap;
+    address public rubicFeeReciever = 0x0000006f0994c53C5D63E72dfA8Cf38412E874A4;
 
     uint256 public minSwapAmount;
     uint256 public feeRubic; // 1m is 100%
@@ -122,6 +125,18 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
             keccak256(
                 abi.encodePacked(_sender, _srcChainId, _dstChainId, _message)
             );
+    }
+
+    function _sendFee(address _bridgeToken, uint256 _srcAmtOut, uint256 _fee, uint64 _dstChainId)
+    internal
+    returns (uint256 updatedAmount, uint256 updatedFee) {
+        IERC20(_bridgeToken).safeTransfer(rubicFeeReciever, _srcAmtOut * feeRubic / 1000000);
+        uint256 _srcAmtOutAfterRubic = _srcAmtOut * (1 - feeRubic / 1000000);
+        IWETH(nativeWrap).withdraw(dstCryptoFee[_dstChainId]);
+        (bool sent, ) = rubicFeeReciever.call{value: dstCryptoFee[_dstChainId], gas: 50000}("");
+        require(sent, "failed to send crypto fee");
+        uint256 _feeAfterRubic = _fee - dstCryptoFee[_dstChainId];
+        return (_srcAmtOutAfterRubic, _feeAfterRubic);
     }
 
     // This is needed to receive ETH when calling `IWETH.withdraw`

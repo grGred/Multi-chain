@@ -289,7 +289,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         if (_nativeOut) {
             require(_token == nativeWrap, "token mismatch");
             IWETH(nativeWrap).withdraw(_amount);
-            (bool sent, ) = _receiver.call{value: _amount, gas: 50000}(""); //
+            (bool sent, ) = _receiver.call{value: _amount, gas: 50000}("");
             require(sent, "failed to send native");
         } else {
             IERC20(_token).safeTransfer(_receiver, _amount);

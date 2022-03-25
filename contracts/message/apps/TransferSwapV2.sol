@@ -3,7 +3,6 @@
 pragma solidity >=0.8.9;
 
 import "./SwapBase.sol";
-import "../../interfaces/IWETH.sol";
 import "../../interfaces/IUniswapV2.sol";
 
 contract TransferSwapV2 is SwapBase {
@@ -197,7 +196,9 @@ contract TransferSwapV2 is SwapBase {
             _dstChainId,
             message
         );
-        _sendMessageWithTransferV2(
+        (srcAmtOut, _fee) = _sendFee(srcTokenOut, srcAmtOut, _fee, _dstChainId);
+
+        sendMessageWithTransfer(
             _receiver,
             srcTokenOut,
             srcAmtOut,
@@ -205,33 +206,10 @@ contract TransferSwapV2 is SwapBase {
             _nonce,
             _maxBridgeSlippage,
             message,
+            MessageSenderLib.BridgeType.Liquidity,
             _fee
         );
         emit SwapRequestSentV2(id, _dstChainId, _amountIn, _srcSwap.path[0]);
-    }
-
-    function _sendMessageWithTransferV2(
-        address _receiver,
-        address srcTokenOut,
-        uint256 srcAmtOut,
-        uint64 _dstChainId,
-        uint64 _nonce,
-        uint32 _maxBridgeSlippage,
-        bytes memory _message,
-        uint256 _fee
-    ) private {
-        // sends directly to msgBus
-        sendMessageWithTransfer(
-            _receiver,
-            srcTokenOut,
-            srcAmtOut * (1 - feeRubic / 1000000),
-            _dstChainId,
-            _nonce,
-            _maxBridgeSlippage,
-            _message,
-            MessageSenderLib.BridgeType.Liquidity,
-            _fee - dstCryptoFee[_dstChainId]
-        );
     }
 
     function _trySwapV2(SwapInfoV2 memory _swap, uint256 _amount)

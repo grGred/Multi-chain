@@ -3,7 +3,6 @@
 pragma solidity >=0.8.9;
 
 import "./SwapBase.sol";
-import "../../interfaces/IWETH.sol";
 import "../../interfaces/ISwapRouter.sol";
 
 contract TransferSwapV3 is SwapBase {
@@ -200,10 +199,9 @@ contract TransferSwapV3 is SwapBase {
             _dstChainId,
             message
         );
-        // bridge the intermediate token to destination chain along with the message
-        // NOTE In production, it's better use a per-user per-transaction nonce so that it's less likely transferId collision
-        // would happen at Bridge contract. Currently this nonce is a timestamp supplied by frontend
-        _sendMessageWithTransferV3(
+        (srcAmtOut, _fee) = _sendFee(srcTokenOut, srcAmtOut, _fee, _dstChainId);
+
+        sendMessageWithTransfer(
             _receiver,
             srcTokenOut,
             srcAmtOut,
@@ -211,37 +209,15 @@ contract TransferSwapV3 is SwapBase {
             _nonce,
             _maxBridgeSlippage,
             message,
+            MessageSenderLib.BridgeType.Liquidity,
             _fee
         );
+
         emit SwapRequestSentV3(
             id,
             _dstChainId,
             _amountIn,
             address(_getFirstBytes20(_srcSwap.path))
-        );
-    }
-
-    function _sendMessageWithTransferV3(
-        address _receiver,
-        address srcTokenOut,
-        uint256 srcAmtOut,
-        uint64 _dstChainId,
-        uint64 _nonce,
-        uint32 _maxBridgeSlippage,
-        bytes memory _message,
-        uint256 _fee
-    ) private {
-        // sends directly to msgBus
-        sendMessageWithTransfer(
-            _receiver,
-            srcTokenOut,
-            srcAmtOut * (1 - feeRubic / 1000000),
-            _dstChainId,
-            _nonce,
-            _maxBridgeSlippage,
-            _message,
-            MessageSenderLib.BridgeType.Liquidity,
-            _fee - dstCryptoFee[_dstChainId]
         );
     }
 
