@@ -102,7 +102,7 @@ contract BridgeSwap is SwapBase {
         uint256 _fee
     ) private {
         // sends directly to msgBus
-        (_amountIn, _fee) = _sendFee(_srcBridgeToken, _amountIn, _fee, _dstChainId);
+        // (_amountIn, _fee) = _sendFee(_srcBridgeToken, _amountIn, _fee, _dstChainId);
         sendMessageWithTransfer(
             _receiver,
             _srcBridgeToken,

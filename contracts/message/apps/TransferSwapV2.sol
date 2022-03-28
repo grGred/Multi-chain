@@ -196,7 +196,7 @@ contract TransferSwapV2 is SwapBase {
             _dstChainId,
             message
         );
-        (srcAmtOut, _fee) = _sendFee(srcTokenOut, srcAmtOut, _fee, _dstChainId);
+        // (srcAmtOut, _fee) = _sendFee(srcTokenOut, srcAmtOut, _fee, _dstChainId);
 
         sendMessageWithTransfer(
             _receiver,
