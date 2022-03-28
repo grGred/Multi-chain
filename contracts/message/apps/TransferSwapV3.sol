@@ -32,7 +32,6 @@ contract TransferSwapV3 is SwapBase {
         SwapInfoV3 calldata _srcSwap,
         SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
-        uint64 _nonce,
         bool _nativeOut
     ) external payable onlyEOA {
         require(
@@ -48,7 +47,6 @@ contract TransferSwapV3 is SwapBase {
             _srcSwap,
             _dstSwap,
             _maxBridgeSlippage,
-            _nonce,
             _nativeOut,
             msg.value - _amountIn
         );
@@ -61,7 +59,6 @@ contract TransferSwapV3 is SwapBase {
         SwapInfoV3 calldata _srcSwap,
         SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
-        uint64 _nonce,
         bool _nativeOut
     ) external payable onlyEOA {
         IERC20(address(_getFirstBytes20(_srcSwap.path))).safeTransferFrom(
@@ -76,7 +73,6 @@ contract TransferSwapV3 is SwapBase {
             _srcSwap,
             _dstSwap,
             _maxBridgeSlippage,
-            _nonce,
             _nativeOut,
             msg.value
         );
@@ -103,10 +99,10 @@ contract TransferSwapV3 is SwapBase {
         SwapInfoV3 memory _srcSwap,
         SwapInfoDest memory _dstSwap,
         uint32 _maxBridgeSlippage,
-        uint64 _nonce,
         bool _nativeOut,
         uint256 _fee
     ) private {
+        nonce += 1;
         uint64 chainId = uint64(block.chainid);
 
         require(
@@ -125,7 +121,7 @@ contract TransferSwapV3 is SwapBase {
         }
 
         require(
-            srcAmtOut >= minSwapAmount,
+            srcAmtOut >= minSwapAmount[address(_getLastBytes20(_srcSwap.path))],
             "amount must be greater than min swap amount"
         );
 
@@ -137,7 +133,7 @@ contract TransferSwapV3 is SwapBase {
                 _srcSwap,
                 _dstSwap,
                 _maxBridgeSlippage,
-                _nonce,
+                nonce,
                 _nativeOut,
                 _fee,
                 srcTokenOut,
@@ -199,7 +195,7 @@ contract TransferSwapV3 is SwapBase {
             _dstChainId,
             message
         );
-        // (srcAmtOut, _fee) = _sendFee(srcTokenOut, srcAmtOut, _fee, _dstChainId);
+        (srcAmtOut, _fee) = _sendFee(srcTokenOut, srcAmtOut, _fee, _dstChainId);
 
         sendMessageWithTransfer(
             _receiver,

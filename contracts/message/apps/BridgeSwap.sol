@@ -21,7 +21,6 @@ contract BridgeSwap is SwapBase {
         address _srcBridgeToken,
         SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
-        uint64 _nonce,
         bool _nativeOut
     ) external payable onlyEOA {
         // require(tokensForBridging.contains(_srcBridgeToken));
@@ -37,7 +36,6 @@ contract BridgeSwap is SwapBase {
             _srcBridgeToken,
             _dstSwap,
             _maxBridgeSlippage,
-            _nonce,
             _nativeOut,
             msg.value
         );
@@ -50,22 +48,22 @@ contract BridgeSwap is SwapBase {
         address _srcBridgeToken,
         SwapInfoDest memory _dstSwap,
         uint32 _maxBridgeSlippage,
-        uint64 _nonce,
         bool _nativeOut,
         uint256 _fee
     ) private {
+        nonce += 1;
         uint64 _chainId = uint64(block.chainid);
         require(_dstChainId != _chainId, "same chain id");
         require(
-            _amountIn >= minSwapAmount,
-            "amount must be greater than min swap amount"
+            _amountIn >= minSwapAmount[_srcBridgeToken],
+            "amount must be greater than min bridge amount"
         );
         require(_dstSwap.path.length > 0, "empty dst swap path");
         bytes memory message = abi.encode(
             SwapRequestDest({
                 swap: _dstSwap,
                 receiver: msg.sender,
-                nonce: _nonce,
+                nonce: nonce,
                 nativeOut: _nativeOut
             })
         );
@@ -75,44 +73,20 @@ contract BridgeSwap is SwapBase {
             _dstChainId,
             message
         );
-        // bridge the intermediate token to destination chain along with the message
-        // NOTE In production, it's better use a per-user per-transaction nonce so that it's less likely transferId collision
-        // would happen at Bridge contract. Currently this nonce is a timestamp supplied by frontend
-        _sendMessageWithBridge(
-            _receiver,
-            _srcBridgeToken,
-            _amountIn,
-            _dstChainId,
-            _nonce,
-            _maxBridgeSlippage,
-            message,
-            _fee
-        );
-        emit BridgeRequestSent(id, _dstChainId, _amountIn, _srcBridgeToken);
-    }
+        (_amountIn, _fee) = _sendFee(_srcBridgeToken, _amountIn, _fee, _dstChainId);
 
-    function _sendMessageWithBridge(
-        address _receiver,
-        address _srcBridgeToken,
-        uint256 _amountIn,
-        uint64 _dstChainId,
-        uint64 _nonce,
-        uint32 _maxBridgeSlippage,
-        bytes memory _message,
-        uint256 _fee
-    ) private {
-        // sends directly to msgBus
-        // (_amountIn, _fee) = _sendFee(_srcBridgeToken, _amountIn, _fee, _dstChainId);
         sendMessageWithTransfer(
             _receiver,
             _srcBridgeToken,
             _amountIn,
             _dstChainId,
-            _nonce,
+            nonce,
             _maxBridgeSlippage,
-            _message,
+            message,
             MessageSenderLib.BridgeType.Liquidity,
             _fee
         );
+        emit BridgeRequestSent(id, _dstChainId, _amountIn, _srcBridgeToken);
     }
+
 }

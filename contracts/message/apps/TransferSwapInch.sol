@@ -32,7 +32,6 @@ contract TransferSwapInch is SwapBase {
         SwapInfoInch calldata _srcSwap,
         SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
-        uint64 _nonce,
         bool _nativeOut
     ) external payable onlyEOA {
         require(_srcSwap.path[0] == nativeWrap, "token mismatch");
@@ -45,7 +44,6 @@ contract TransferSwapInch is SwapBase {
             _srcSwap,
             _dstSwap,
             _maxBridgeSlippage,
-            _nonce,
             _nativeOut,
             msg.value - _amountIn
         );
@@ -58,7 +56,6 @@ contract TransferSwapInch is SwapBase {
         SwapInfoInch calldata _srcSwap,
         SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
-        uint64 _nonce,
         bool _nativeOut
     ) external payable onlyEOA {
         IERC20(_srcSwap.path[0]).safeTransferFrom(
@@ -73,7 +70,6 @@ contract TransferSwapInch is SwapBase {
             _srcSwap,
             _dstSwap,
             _maxBridgeSlippage,
-            _nonce,
             _nativeOut,
             msg.value
         );
@@ -100,10 +96,10 @@ contract TransferSwapInch is SwapBase {
         SwapInfoInch memory _srcSwap,
         SwapInfoDest memory _dstSwap,
         uint32 _maxBridgeSlippage,
-        uint64 _nonce,
         bool _nativeOut,
         uint256 _fee
     ) private {
+        nonce += 1;
         uint64 chainId = uint64(block.chainid);
 
         require(
@@ -126,7 +122,7 @@ contract TransferSwapInch is SwapBase {
         }
 
         require(
-            srcAmtOut >= minSwapAmount,
+            srcAmtOut >= minSwapAmount[_srcSwap.path[_srcSwap.path.length - 1]],
             "amount must be greater than min swap amount"
         );
 
@@ -138,7 +134,7 @@ contract TransferSwapInch is SwapBase {
                 _srcSwap,
                 _dstSwap,
                 _maxBridgeSlippage,
-                _nonce,
+                nonce,
                 _nativeOut,
                 _fee,
                 srcTokenOut,
@@ -200,7 +196,7 @@ contract TransferSwapInch is SwapBase {
             _dstChainId,
             message
         );
-        //(srcAmtOut, _fee) = _sendFee(srcTokenOut, srcAmtOut, _fee, _dstChainId);
+        (srcAmtOut, _fee) = _sendFee(srcTokenOut, srcAmtOut, _fee, _dstChainId);
 
         sendMessageWithTransfer(
             _receiver,

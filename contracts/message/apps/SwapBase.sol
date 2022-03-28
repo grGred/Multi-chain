@@ -16,11 +16,14 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
 
     // erc20 wrap of gas token of this chain, eg. WETH
     address public nativeWrap;
-    address public rubicFeeReciever = 0x0000006f0994c53C5D63E72dfA8Cf38412E874A4;
 
-    uint256 public minSwapAmount;
+    // minimal amount of bridged token
+    mapping(address => uint256) public minSwapAmount;
+    // fee amount that is safe to withdraw from contract
+    mapping(address => uint256) public collectedFee;
     uint256 public feeRubic; // 1m is 100%
-    uint8 public decimals = 18;
+
+    uint64 nonce;
 
     modifier onlyEOA() {
         require(msg.sender == tx.origin, "Not EOA");
@@ -128,12 +131,10 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
     function _sendFee(address _bridgeToken, uint256 _srcAmtOut, uint256 _fee, uint64 _dstChainId)
     internal
     returns (uint256 updatedAmount, uint256 updatedFee) {
-        IERC20(_bridgeToken).safeTransfer(rubicFeeReciever, _srcAmtOut * feeRubic / 1000000);
         uint256 _srcAmtOutAfterRubic = _srcAmtOut * (1 - feeRubic / 1000000);
-        IWETH(nativeWrap).withdraw(dstCryptoFee[_dstChainId]);
-        (bool sent, ) = rubicFeeReciever.call{value: dstCryptoFee[_dstChainId], gas: 50000}("");
-        require(sent, "failed to send crypto fee");
         uint256 _feeAfterRubic = _fee - dstCryptoFee[_dstChainId];
+        collectedFee[_bridgeToken] += _srcAmtOut * (feeRubic / 1000000);
+        collectedFee[nativeWrap] += dstCryptoFee[_dstChainId];
         return (_srcAmtOutAfterRubic, _feeAfterRubic);
     }
 

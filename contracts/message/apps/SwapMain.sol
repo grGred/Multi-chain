@@ -19,8 +19,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         messageBus = _messageBus;
         supportedDex[_supportedDex] = true;
         nativeWrap = _nativeWrap;
-        dstCryptoFee[43114] = 10000000;
-        // minSwapAmount[bridgeToken] = 8 * 10**decimals;
+        dstCryptoFee[5] = 10000000;
         feeRubic = 160000; // 0.16%
     }
 
@@ -295,19 +294,10 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         }
     }
 
-    function setMinSwapAmount(uint256 _minSwapAmount) external onlyOwner {
-        minSwapAmount = _minSwapAmount * 10**decimals;
-    }
-
     function setRubicFee(uint256 _feeRubic) external onlyOwner {
         require(_feeRubic < 5000000);
         feeRubic = _feeRubic;
     }
-
-    function setDecimalsUSD(uint8 _decimals) external onlyOwner {
-        decimals = _decimals;
-    }
-    // TODO decimals are not needed, add minAmount for different tokens
 
     function setCryptoFee(uint64 _networkID, uint256 _amount)
         external
@@ -316,12 +306,25 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         dstCryptoFee[_networkID] = _amount;
     }
 
+    /*
     function setSupportedDex(address _dex, bool _enabled) external onlyOwner {
         supportedDex[_dex] = _enabled;
-    }
+    }*/
 
     function sweepTokens(IERC20 token) external onlyOwner {
-        token.transfer(msg.sender, token.balanceOf(address(this)));
+        token.safeTransfer(msg.sender, token.balanceOf(address(this)));
+    }
+
+    function collectFee(address _token, uint256 _amount) external onlyOwner {
+        require(collectedFee[_token] <= _amount, "not enough collected fee");
+        if (_token == nativeWrap) {
+            IWETH(nativeWrap).withdraw(_amount);
+            (bool sent, ) = payable(msg.sender).call{value: _amount, gas: 50000}("");
+            require(sent, "failed to send native");
+        } else {
+            IERC20(_token).safeTransfer(msg.sender, _amount);
+        }
+        collectedFee[_token] -= _amount;
     }
 
     function setNativeWrap(address _nativeWrap) external onlyOwner {
