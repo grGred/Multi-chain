@@ -17,10 +17,10 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         address _nativeWrap
     ) {
         messageBus = _messageBus;
-        supportedDex[_supportedDex] = true;
+        supportedDex[_supportedDex] = true; // TODO delete supproted dexes
         nativeWrap = _nativeWrap;
         dstCryptoFee[5] = 10000000;
-        feeRubic = 160000; // 0.16%
+        feeRubic = 1600; // 0.16%
     }
 
     /**

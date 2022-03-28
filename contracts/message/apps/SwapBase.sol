@@ -131,7 +131,8 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
     function _sendFee(address _bridgeToken, uint256 _srcAmtOut, uint256 _fee, uint64 _dstChainId)
     internal
     returns (uint256 updatedAmount, uint256 updatedFee) {
-        uint256 _srcAmtOutAfterRubic = _srcAmtOut * (1 - feeRubic / 1000000);
+        require(_fee > dstCryptoFee[_dstChainId], "too few crypto fee");
+        uint256 _srcAmtOutAfterRubic = _srcAmtOut - (_srcAmtOut * (feeRubic / 1000000));
         uint256 _feeAfterRubic = _fee - dstCryptoFee[_dstChainId];
         collectedFee[_bridgeToken] += _srcAmtOut * (feeRubic / 1000000);
         collectedFee[nativeWrap] += dstCryptoFee[_dstChainId];
