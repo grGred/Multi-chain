@@ -27,7 +27,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         feeRubic = 1600; // 0.16%
     }
 
-    /**
+     /**
      * @notice called by MessageBus when the tokens are checked to be arrived at this contract's address.
                sends the amount received to the receiver. swaps beforehand if swap behavior is defined in message
      * NOTE: if the swap fails, it sends the tokens received directly to the receiver as fallback behavior
@@ -47,26 +47,22 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
         bytes32 id = _computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
 
-        uint256 dstAmount = _amount;
-        SwapStatus status;
-
         if (m.swap.version == SwapVersion.v3) {
-            (dstAmount, status) = _executeDstSwapV3(_token, _amount, id, m);
+            _executeDstSwapV3(_token, _amount, id, m);
         }
         else if (m.swap.version == SwapVersion.bridge) {
             _executeDstBridge(_token, _amount, id, m);
-            status = SwapStatus.Succeeded;
         }
         else if (m.swap.version == SwapVersion.v2) {
-            (dstAmount, status) = _executeDstSwapV2(_token, _amount, id, m);
+            _executeDstSwapV2(_token, _amount, id, m);
         } else {
-            (dstAmount, status) = _executeDstSwapInch(_token, _amount, id, m);
+            _executeDstSwapInch(_token, _amount, id, m);
         }
         // always return true since swap failure is already handled in-place
         return ExecutionStatus.Success;
     }
 
-    /**
+     /**
      * @notice called by MessageBus when the executeMessageWithTransfer call fails. does nothing but emitting a "fail" event
      * @param _srcChainId source chain ID
      * @param _message SwapRequest message that defines the swap behavior on this destination chain
@@ -91,9 +87,9 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         _sendToken(_token, _amount, m.receiver, m.nativeOut);
 
         emit SwapRequestDone(id, 0, SwapStatus.Failed);
-        // always return false to mark this transfer as failed since if this function is called then there nothing more
+        // always return Fail to mark this transfer as failed since if this function is called then there nothing more
         // we can do in this app as the swap failures are already handled in executeMessageWithTransfer
-        return false;
+        return ExecutionStatus.Fail;
     }
 
     // called on source chain for handling of bridge failures (bad liquidity, bad slippage, etc...)

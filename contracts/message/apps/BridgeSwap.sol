@@ -39,7 +39,7 @@ contract BridgeSwap is SwapBase {
             _dstSwap,
             _maxBridgeSlippage,
             _nativeOut,
-            msg.value
+            _fee
         );
     }
 
