@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-only
 
-pragma solidity >=0.8.9;
+pragma solidity 0.8.9;
 
 import "../../safeguard/Ownable.sol";
 import "../../interfaces/ISigsVerifier.sol";
@@ -12,13 +12,7 @@ contract MessageBusSender is Ownable {
     uint256 public feePerByte;
     mapping(address => uint256) public withdrawnFees;
 
-    event Message(
-        address indexed sender,
-        address receiver,
-        uint256 dstChainId,
-        bytes message,
-        uint256 fee
-    );
+    event Message(address indexed sender, address receiver, uint256 dstChainId, bytes message, uint256 fee);
 
     event MessageWithTransfer(
         address indexed sender,
@@ -38,7 +32,10 @@ contract MessageBusSender is Ownable {
     }
 
     /**
-     * @notice Sends a message to an app on another chain via MessageBus without an associated transfer.
+     * @notice Sends a message to a contract on another chain.
+     * Sender needs to make sure the uniqueness of the message Id, which is computed as
+     * hash(type.MessageOnly, sender, receiver, srcChainId, srcTxHash, dstChainId, message).
+     * If messages with the same Id are sent, only one of them will succeed at dst chain.
      * A fee is charged in the native gas token.
      * @param _receiver The address of the destination app contract.
      * @param _dstChainId The destination chain ID.
@@ -49,13 +46,15 @@ contract MessageBusSender is Ownable {
         uint256 _dstChainId,
         bytes calldata _message
     ) external payable {
+        require(_dstChainId != block.chainid, "Invalid chainId");
         uint256 minFee = calcFee(_message);
         require(msg.value >= minFee, "Insufficient fee");
         emit Message(msg.sender, _receiver, _dstChainId, _message, msg.value);
     }
 
     /**
-     * @notice Sends a message associated with a transfer to an app on another chain via MessageBus without an associated transfer.
+     * @notice Sends a message associated with a transfer to a contract on another chain.
+     * If messages with the same srcTransferId are sent, only one of them will succeed.
      * A fee is charged in the native token.
      * @param _receiver The address of the destination app contract.
      * @param _dstChainId The destination chain ID.
@@ -71,21 +70,14 @@ contract MessageBusSender is Ownable {
         bytes32 _srcTransferId,
         bytes calldata _message
     ) external payable {
+        require(_dstChainId != block.chainid, "Invalid chainId");
         uint256 minFee = calcFee(_message);
         require(msg.value >= minFee, "Insufficient fee");
         // SGN needs to verify
         // 1. msg.sender matches sender of the src transfer
         // 2. dstChainId matches dstChainId of the src transfer
         // 3. bridge is either liquidity bridge, peg src vault, or peg dst bridge
-        emit MessageWithTransfer(
-            msg.sender,
-            _receiver,
-            _dstChainId,
-            _srcBridge,
-            _srcTransferId,
-            _message,
-            msg.value
-        );
+        emit MessageWithTransfer(msg.sender, _receiver, _dstChainId, _srcBridge, _srcTransferId, _message, msg.value);
     }
 
     /**
@@ -104,15 +96,8 @@ contract MessageBusSender is Ownable {
         address[] calldata _signers,
         uint256[] calldata _powers
     ) external {
-        bytes32 domain = keccak256(
-            abi.encodePacked(block.chainid, address(this), "withdrawFee")
-        );
-        sigsVerifier.verifySigs(
-            abi.encodePacked(domain, _account, _cumulativeFee),
-            _sigs,
-            _signers,
-            _powers
-        );
+        bytes32 domain = keccak256(abi.encodePacked(block.chainid, address(this), "withdrawFee"));
+        sigsVerifier.verifySigs(abi.encodePacked(domain, _account, _cumulativeFee), _sigs, _signers, _powers);
         uint256 amount = _cumulativeFee - withdrawnFees[_account];
         require(amount > 0, "No new amount to withdraw");
         withdrawnFees[_account] = _cumulativeFee;

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-only
 
 pragma solidity >=0.8.0;
 
@@ -22,6 +22,13 @@ interface IBridge {
     function transfers(bytes32 transferId) external view returns (bool);
 
     function withdraws(bytes32 withdrawId) external view returns (bool);
+
+    function withdraw(
+        bytes calldata _wdmsg,
+        bytes[] calldata _sigs,
+        address[] calldata _signers,
+        uint256[] calldata _powers
+    ) external;
 
     /**
      * @notice Verifies that a message is signed by a quorum among the signers.

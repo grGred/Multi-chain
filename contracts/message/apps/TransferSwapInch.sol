@@ -7,8 +7,8 @@ import "./SwapBase.sol";
 contract TransferSwapInch is SwapBase {
     using Address for address payable;
     using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
-    // emitted when requested dstChainId == srcChainId, no bridging
     event DirectSwapInch(
         bytes32 id,
         uint64 srcChainId,
@@ -26,7 +26,7 @@ contract TransferSwapInch is SwapBase {
     );
 
     function transferWithSwapInchNative(
-        address _receiver, // transfer swap contract in dst chain
+        address _receiver,
         uint256 _amountIn,
         uint64 _dstChainId,
         SwapInfoInch calldata _srcSwap,
@@ -37,6 +37,9 @@ contract TransferSwapInch is SwapBase {
         require(_srcSwap.path[0] == nativeWrap, "token mismatch");
         require(msg.value >= _amountIn, "Amount insufficient");
         IWETH(nativeWrap).deposit{value: _amountIn}();
+
+        uint256 _fee = _calculateCryptoFee(msg.value - _amountIn, _dstChainId);
+
         _transferWithSwapInch(
             _receiver,
             _amountIn,
@@ -45,12 +48,12 @@ contract TransferSwapInch is SwapBase {
             _dstSwap,
             _maxBridgeSlippage,
             _nativeOut,
-            msg.value - _amountIn
+            _fee
         );
     }
 
     function transferWithSwapInch(
-        address _receiver, // transfer swap contract in dst chain
+        address _receiver,
         uint256 _amountIn,
         uint64 _dstChainId,
         SwapInfoInch calldata _srcSwap,
@@ -63,6 +66,9 @@ contract TransferSwapInch is SwapBase {
             address(this),
             _amountIn
         );
+
+        uint256 _fee = _calculateCryptoFee(msg.value, _dstChainId);
+
         _transferWithSwapInch(
             _receiver,
             _amountIn,
@@ -71,7 +77,7 @@ contract TransferSwapInch is SwapBase {
             _dstSwap,
             _maxBridgeSlippage,
             _nativeOut,
-            msg.value
+            _fee
         );
     }
 
@@ -196,7 +202,6 @@ contract TransferSwapInch is SwapBase {
             _dstChainId,
             message
         );
-        (srcAmtOut, _fee) = _sendFee(srcTokenOut, srcAmtOut, _fee, _dstChainId);
 
         sendMessageWithTransfer(
             _receiver,
@@ -206,7 +211,7 @@ contract TransferSwapInch is SwapBase {
             _nonce,
             _maxBridgeSlippage,
             message,
-            MessageSenderLib.BridgeType.Liquidity,
+            MsgDataTypes.BridgeSendType.Liquidity,
             _fee
         );
         emit SwapRequestSentInch(id, _dstChainId, _amountIn, _srcSwap.path[0]);
@@ -214,13 +219,16 @@ contract TransferSwapInch is SwapBase {
 
     function _trySwapNativeInch(SwapInfoInch memory _swap, uint256 _amount)
         internal
-        returns (bool ok, uint256 amountOut)
+        returns (
+            bool ok,
+            uint256 amountOut
+        )
     {
-        uint256 zero;
-        if (!supportedDex[_swap.dex]) {
-            return (false, zero);
+        if (!supportedDEXes.contains(_swap.dex)) {
+            return (false, 0);
         }
-        IERC20(_swap.path[0]).safeIncreaseAllowance(_swap.dex, _amount);
+
+        safeApprove(IERC20(_swap.path[0]), _amount, _swap.dex);
 
         IERC20 Transit = IERC20(_swap.path[_swap.path.length - 1]);
         uint256 transitBalanceBefore = Transit.balanceOf(address(this));
@@ -234,18 +242,21 @@ contract TransferSwapInch is SwapBase {
             return (true, balanceDif);
         }
 
-        return (false, zero);
+        return (false, 0);
     }
 
     function _trySwapInch(SwapInfoInch memory _swap, uint256 _amount)
         internal
-        returns (bool ok, uint256 amountOut)
+        returns (
+            bool ok,
+            uint256 amountOut
+        )
     {
-        uint256 zero;
-        if (!supportedDex[_swap.dex]) {
-            return (false, zero);
+        if (!supportedDEXes.contains(_swap.dex)) {
+            return (false, 0);
         }
-        IERC20(_swap.path[0]).safeIncreaseAllowance(_swap.dex, _amount);
+
+        safeApprove(IERC20(_swap.path[0]), _amount, _swap.dex);
 
         IERC20 Transit = IERC20(_swap.path[_swap.path.length - 1]);
         uint256 transitBalanceBefore = Transit.balanceOf(address(this));
@@ -259,6 +270,6 @@ contract TransferSwapInch is SwapBase {
             return (true, balanceDif);
         }
 
-        return (false, zero);
+        return (false, 0);
     }
 }

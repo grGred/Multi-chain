@@ -3,10 +3,11 @@
 pragma solidity >=0.8.9;
 
 import "./SwapBase.sol";
-import "../../interfaces/IUniswapV2.sol";
+import '@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol';
 
 contract TransferSwapV2 is SwapBase {
     using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     // emitted when requested dstChainId == srcChainId, no bridging
     event DirectSwapV2(
@@ -37,6 +38,9 @@ contract TransferSwapV2 is SwapBase {
         require(_srcSwap.path[0] == nativeWrap, "token mismatch");
         require(msg.value >= _amountIn, "Amount insufficient");
         IWETH(nativeWrap).deposit{value: _amountIn}();
+
+        uint256 _fee = _calculateCryptoFee(msg.value - _amountIn, _dstChainId);
+
         _transferWithSwapV2(
             _receiver,
             _amountIn,
@@ -45,7 +49,7 @@ contract TransferSwapV2 is SwapBase {
             _dstSwap,
             _maxBridgeSlippage,
             _nativeOut,
-            msg.value - _amountIn
+            _fee
         );
     }
 
@@ -63,6 +67,9 @@ contract TransferSwapV2 is SwapBase {
             address(this),
             _amountIn
         );
+
+        uint256 _fee = _calculateCryptoFee(msg.value, _dstChainId);
+
         _transferWithSwapV2(
             _receiver,
             _amountIn,
@@ -71,7 +78,7 @@ contract TransferSwapV2 is SwapBase {
             _dstSwap,
             _maxBridgeSlippage,
             _nativeOut,
-            msg.value
+            _fee
         );
     }
 
@@ -192,7 +199,6 @@ contract TransferSwapV2 is SwapBase {
             _dstChainId,
             message
         );
-        (srcAmtOut, _fee) = _sendFee(srcTokenOut, srcAmtOut, _fee, _dstChainId);
 
         sendMessageWithTransfer(
             _receiver,
@@ -202,7 +208,7 @@ contract TransferSwapV2 is SwapBase {
             _nonce,
             _maxBridgeSlippage,
             message,
-            MessageSenderLib.BridgeType.Liquidity,
+            MsgDataTypes.BridgeSendType.Liquidity,
             _fee
         );
         emit SwapRequestSentV2(id, _dstChainId, _amountIn, _srcSwap.path[0]);
@@ -210,16 +216,18 @@ contract TransferSwapV2 is SwapBase {
 
     function _trySwapV2(SwapInfoV2 memory _swap, uint256 _amount)
         internal
-        returns (bool ok, uint256 amountOut)
+        returns (
+            bool ok,
+            uint256 amountOut
+        )
     {
-        uint256 zero;
-        /*
-        if (!supportedDex[_swap.dex]) {
-            return (false, zero);
-        }*/
-        IERC20(_swap.path[0]).safeIncreaseAllowance(_swap.dex, _amount);
+        if (!supportedDEXes.contains(_swap.dex)) {
+            return (false, 0);
+        }
+
+        safeApprove(IERC20(_swap.path[0]), _amount, _swap.dex);
         try
-            IUniswapV2(_swap.dex).swapExactTokensForTokens(
+            IUniswapV2Router02(_swap.dex).swapExactTokensForTokens(
                 _amount,
                 _swap.amountOutMinimum,
                 _swap.path,
@@ -229,7 +237,7 @@ contract TransferSwapV2 is SwapBase {
         returns (uint256[] memory amounts) {
             return (true, amounts[amounts.length - 1]);
         } catch {
-            return (false, zero);
+            return (false, 0);
         }
     }
 }

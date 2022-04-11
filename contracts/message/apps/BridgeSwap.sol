@@ -23,12 +23,14 @@ contract BridgeSwap is SwapBase {
         uint32 _maxBridgeSlippage,
         bool _nativeOut
     ) external payable onlyEOA {
-        // require(tokensForBridging.contains(_srcBridgeToken));
         IERC20(_srcBridgeToken).safeTransferFrom(
             msg.sender,
             address(this),
             _amountIn
         );
+
+        uint256 _fee = _calculateCryptoFee(msg.value, _dstChainId);
+
         _crossChainBridgeWithSwap(
             _receiver,
             _amountIn,
@@ -38,6 +40,33 @@ contract BridgeSwap is SwapBase {
             _maxBridgeSlippage,
             _nativeOut,
             msg.value
+        );
+    }
+
+    function bridgeWithSwapNative(
+        address _receiver,
+        uint256 _amountIn,
+        uint64 _dstChainId,
+        address _srcBridgeToken,
+        SwapInfoDest calldata _dstSwap,
+        uint32 _maxBridgeSlippage,
+        bool _nativeOut
+    ) external payable onlyEOA {
+        require(_srcBridgeToken == nativeWrap, "token mismatch");
+        require(msg.value >= _amountIn, "Amount insufficient");
+        IWETH(nativeWrap).deposit{value: _amountIn}();
+
+        uint256 _fee = _calculateCryptoFee(msg.value - _amountIn, _dstChainId);
+
+        _crossChainBridgeWithSwap(
+            _receiver,
+            _amountIn,
+            _dstChainId,
+            _srcBridgeToken,
+            _dstSwap,
+            _maxBridgeSlippage,
+            _nativeOut,
+            _fee
         );
     }
 
@@ -73,7 +102,6 @@ contract BridgeSwap is SwapBase {
             _dstChainId,
             message
         );
-        (_amountIn, _fee) = _sendFee(_srcBridgeToken, _amountIn, _fee, _dstChainId);
 
         sendMessageWithTransfer(
             _receiver,
@@ -83,7 +111,7 @@ contract BridgeSwap is SwapBase {
             nonce,
             _maxBridgeSlippage,
             message,
-            MessageSenderLib.BridgeType.Liquidity,
+            MsgDataTypes.BridgeSendType.Liquidity,
             _fee
         );
         emit BridgeRequestSent(id, _dstChainId, _amountIn, _srcBridgeToken);

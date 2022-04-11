@@ -7,8 +7,8 @@ import "../../interfaces/ISwapRouter.sol";
 
 contract TransferSwapV3 is SwapBase {
     using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
-    // emitted when requested dstChainId == srcChainId, no bridging
     event DirectSwapV3(
         bytes32 id,
         uint64 srcChainId,
@@ -40,6 +40,9 @@ contract TransferSwapV3 is SwapBase {
         );
         require(msg.value >= _amountIn, "Amount insufficient");
         IWETH(nativeWrap).deposit{value: _amountIn}();
+
+        uint256 _fee = _calculateCryptoFee(msg.value - _amountIn, _dstChainId);
+
         _transferWithSwapV3(
             _receiver,
             _amountIn,
@@ -48,7 +51,7 @@ contract TransferSwapV3 is SwapBase {
             _dstSwap,
             _maxBridgeSlippage,
             _nativeOut,
-            msg.value - _amountIn
+            _fee
         );
     }
 
@@ -66,6 +69,9 @@ contract TransferSwapV3 is SwapBase {
             address(this),
             _amountIn
         );
+
+        uint256 _fee = _calculateCryptoFee(msg.value, _dstChainId);
+
         _transferWithSwapV3(
             _receiver,
             _amountIn,
@@ -74,7 +80,7 @@ contract TransferSwapV3 is SwapBase {
             _dstSwap,
             _maxBridgeSlippage,
             _nativeOut,
-            msg.value
+            _fee
         );
     }
 
@@ -195,7 +201,6 @@ contract TransferSwapV3 is SwapBase {
             _dstChainId,
             message
         );
-        (srcAmtOut, _fee) = _sendFee(srcTokenOut, srcAmtOut, _fee, _dstChainId);
 
         sendMessageWithTransfer(
             _receiver,
@@ -205,7 +210,7 @@ contract TransferSwapV3 is SwapBase {
             _nonce,
             _maxBridgeSlippage,
             message,
-            MessageSenderLib.BridgeType.Liquidity,
+            MsgDataTypes.BridgeSendType.Liquidity,
             _fee
         );
 

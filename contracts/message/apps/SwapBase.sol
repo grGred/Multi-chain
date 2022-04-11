@@ -4,6 +4,7 @@ pragma solidity >=0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import "../framework/MessageBusAddress.sol";
 import "../framework/MessageSenderApp.sol";
 import "../framework/MessageReceiverApp.sol";
@@ -11,7 +12,9 @@ import "../../interfaces/IWETH.sol";
 
 contract SwapBase is MessageSenderApp, MessageReceiverApp {
     using SafeERC20 for IERC20;
-    mapping(address => bool) supportedDex;
+    using EnumerableSet for EnumerableSet.AddressSet;
+
+    EnumerableSet.AddressSet internal supportedDEXes;
     mapping(uint64 => uint256) public dstCryptoFee;
 
     // erc20 wrap of gas token of this chain, eg. WETH
@@ -128,16 +131,69 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
             );
     }
 
-    function _sendFee(address _bridgeToken, uint256 _srcAmtOut, uint256 _fee, uint64 _dstChainId)
-    internal
-    returns (uint256 updatedAmount, uint256 updatedFee) {
-        require(_fee > dstCryptoFee[_dstChainId], "too few crypto fee");
-        uint256 _srcAmtOutAfterRubic = _srcAmtOut - (_srcAmtOut * (feeRubic / 1000000));
-        uint256 _feeAfterRubic = _fee - dstCryptoFee[_dstChainId];
-        collectedFee[_bridgeToken] += _srcAmtOut * (feeRubic / 1000000);
+    function _calculateCryptoFee(uint256 _fee, uint64 _dstChainId) internal returns (uint256 updatedFee) {
+        require(_fee > dstCryptoFee[_dstChainId], 'too few crypto fee');
+        uint256 _updatedFee = _fee - dstCryptoFee[_dstChainId];
         collectedFee[nativeWrap] += dstCryptoFee[_dstChainId];
-        return (_srcAmtOutAfterRubic, _feeAfterRubic);
+        return (_updatedFee);
     }
+
+    function safeApprove(
+        IERC20 tokenIn,
+        uint256 amount,
+        address to
+    ) internal {
+        uint256 _allowance = tokenIn.allowance(address(this), to);
+        if (_allowance < amount) {
+            if (_allowance == 0) {
+                tokenIn.safeApprove(to, type(uint256).max);
+            } else {
+                try tokenIn.approve(to, type(uint256).max) returns (bool res) {
+                    require(res == true, 'approve failed');
+                } catch {
+                    tokenIn.safeApprove(to, 0);
+                    tokenIn.safeApprove(to, type(uint256).max);
+                }
+            }
+        }
+    }
+
+//    function _calculateFee(address provider, uint256 amountWithFee, uint256 initBlockchainNum) private returns(uint256 amountWithoutFee) {
+//        if (provider != address(0)){
+//            uint256 providerPercent = providerFee[provider];
+//
+//            if (providerPercent > 0){
+//                uint256 platformPercent = platformShare[provider];
+//
+//                uint256 _providerAndProtocolFee = FullMath.mulDiv(
+//                    amountWithFee,
+//                    providerPercent,
+//                    1e6
+//                );
+//
+//                uint256 _platformFee = FullMath.mulDiv(
+//                    _providerAndProtocolFee,
+//                    platformPercent,
+//                    1e6
+//                );
+//
+//                amountOfProvider[provider] += _providerAndProtocolFee - _platformFee;
+//                accTokenFee += _platformFee;
+//
+//                amountWithoutFee = amountWithFee - _providerAndProtocolFee;
+//            } else {
+//                amountWithoutFee = amountWithFee;
+//            }
+//        } else {
+//            amountWithoutFee = FullMath.mulDiv(
+//                amountWithFee,
+//                1e6 - feeAmountOfBlockchain[initBlockchainNum],
+//                1e6
+//            );
+//
+//            accTokenFee += amountWithFee - amountWithoutFee;
+//        }
+//    }
 
     // This is needed to receive ETH when calling `IWETH.withdraw`
     receive() external payable {}

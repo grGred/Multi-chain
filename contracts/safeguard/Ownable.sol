@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-only
 
 pragma solidity ^0.8.0;
 
@@ -20,10 +20,7 @@ pragma solidity ^0.8.0;
 abstract contract Ownable {
     address private _owner;
 
-    event OwnershipTransferred(
-        address indexed previousOwner,
-        address indexed newOwner
-    );
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     /**
      * @dev Initializes the contract setting the deployer as the initial owner.
@@ -62,10 +59,7 @@ abstract contract Ownable {
      * Can only be called by the current owner.
      */
     function transferOwnership(address newOwner) public virtual onlyOwner {
-        require(
-            newOwner != address(0),
-            "Ownable: new owner is the zero address"
-        );
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
         _setOwner(newOwner);
     }
 
