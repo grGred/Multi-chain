@@ -9,12 +9,29 @@ import "../framework/MessageBusAddress.sol";
 import "../framework/MessageSenderApp.sol";
 import "../framework/MessageReceiverApp.sol";
 import "../../interfaces/IWETH.sol";
+import "../libraries/FullMath.sol";
 
 contract SwapBase is MessageSenderApp, MessageReceiverApp {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
     EnumerableSet.AddressSet internal supportedDEXes;
+
+    // Collected fee amount for Rubic and integrators
+    // token -> amount of collected fees
+    mapping(address => uint256) public collectedFee;
+    // integrator -> token -> amount of collected fees
+    mapping(address => mapping(address => uint256)) public integratorCollectedFee;
+
+    // integrator -> percent for integrators
+    mapping(address => uint256) public integratorFee;
+    // integrator -> percent for Rubic
+    mapping(address => uint256) public platformShare;
+
+    // platform Rubic fee
+    uint256 public feeRubic;
+
+    // Crypto fee amount blockchainId -> fee amount
     mapping(uint64 => uint256) public dstCryptoFee;
 
     // erc20 wrap of gas token of this chain, eg. WETH
@@ -22,9 +39,6 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
 
     // minimal amount of bridged token
     mapping(address => uint256) public minSwapAmount;
-    // fee amount that is safe to withdraw from contract
-    mapping(address => uint256) public collectedFee;
-    uint256 public feeRubic; // 1m is 100%
 
     uint64 nonce;
 
@@ -68,6 +82,7 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
 
     struct SwapInfoDest {
         address dex; // dex address
+        address integrator;
         SwapVersion version; // identifies swap type
         address[] path; // path address for v2 and inch
         bytes dataInchOrPathV3; // path address for v3
@@ -131,11 +146,47 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
             );
     }
 
+    // ============== fee logic ==============
+
     function _calculateCryptoFee(uint256 _fee, uint64 _dstChainId) internal returns (uint256 updatedFee) {
         require(_fee > dstCryptoFee[_dstChainId], 'too few crypto fee');
         uint256 _updatedFee = _fee - dstCryptoFee[_dstChainId];
         collectedFee[nativeWrap] += dstCryptoFee[_dstChainId];
         return (_updatedFee);
+    }
+
+    function _calculatePlatformFee(address _integrator, address _token, uint256 _amountWithFee) internal returns(uint256 amountWithoutFee) {
+        uint256 _integratorPercent = integratorFee[_integrator];
+
+        // integrator fee is supposed not to be zero
+        if (_integratorPercent > 0){
+            uint256 platformPercent = platformShare[_integrator];
+
+            uint256 _integratorAndPlatformFee = FullMath.mulDiv(
+                _amountWithFee,
+                _integratorPercent,
+                1e6
+            );
+
+            uint256 _platformFee = FullMath.mulDiv(
+                _integratorAndPlatformFee,
+                _integratorPercent,
+                1e6
+            );
+
+            integratorCollectedFee[_integrator][_token] += _integratorAndPlatformFee - _platformFee;
+            collectedFee[_token] += _platformFee;
+
+            amountWithoutFee = _amountWithFee - _integratorAndPlatformFee;
+        } else {
+            amountWithoutFee = FullMath.mulDiv(
+                _amountWithFee,
+                1e6 - feeRubic,
+                1e6
+            );
+
+            collectedFee[_token] += _amountWithFee - amountWithoutFee;
+        }
     }
 
     function safeApprove(
@@ -158,42 +209,6 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
         }
     }
 
-//    function _calculateFee(address provider, uint256 amountWithFee, uint256 initBlockchainNum) private returns(uint256 amountWithoutFee) {
-//        if (provider != address(0)){
-//            uint256 providerPercent = providerFee[provider];
-//
-//            if (providerPercent > 0){
-//                uint256 platformPercent = platformShare[provider];
-//
-//                uint256 _providerAndProtocolFee = FullMath.mulDiv(
-//                    amountWithFee,
-//                    providerPercent,
-//                    1e6
-//                );
-//
-//                uint256 _platformFee = FullMath.mulDiv(
-//                    _providerAndProtocolFee,
-//                    platformPercent,
-//                    1e6
-//                );
-//
-//                amountOfProvider[provider] += _providerAndProtocolFee - _platformFee;
-//                accTokenFee += _platformFee;
-//
-//                amountWithoutFee = amountWithFee - _providerAndProtocolFee;
-//            } else {
-//                amountWithoutFee = amountWithFee;
-//            }
-//        } else {
-//            amountWithoutFee = FullMath.mulDiv(
-//                amountWithFee,
-//                1e6 - feeAmountOfBlockchain[initBlockchainNum],
-//                1e6
-//            );
-//
-//            accTokenFee += amountWithFee - amountWithoutFee;
-//        }
-//    }
 
     // This is needed to receive ETH when calling `IWETH.withdraw`
     receive() external payable {}
