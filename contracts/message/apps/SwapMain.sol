@@ -284,8 +284,21 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
     }
 
     function setRubicFee(uint256 _feeRubic) external onlyOwner {
-        require(_feeRubic < 5000000);
+        require(_feeRubic <= 1000000, "incorrect fee amount");
         feeRubic = _feeRubic;
+    }
+
+    function setRubicShare(address _integrator, uint256 _percent) external onlyOwner {
+        require(_percent <= 1000000, "incorrect fee amount");
+        require(_integrator != address(0));
+        platformShare[_integrator] = _percent;
+    }
+
+    // set to 0 to remove integrator
+    function setIntegrator(address _integrator, uint256 _percent) external onlyOwner {
+        require(_percent <= 1000000, "incorrect fee amount");
+        require(_integrator != address(0));
+        integratorFee[_integrator] = _percent;
     }
 
     function setCryptoFee(uint64 _networkID, uint256 _amount)
@@ -295,17 +308,39 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         dstCryptoFee[_networkID] = _amount;
     }
 
-    /*
-    function setSupportedDex(address _dex, bool _enabled) external onlyOwner {
-        supportedDex[_dex] = _enabled;
-    }*/
+
+    function addSupportedDex(address[] memory _dexes) external onlyOwner {
+        for (uint256 i = 0; i < _dexes.length; i++) {
+            supportedDEXes.add(_dexes[i]);
+        }
+    }
+
+    function removeSupportedDex(address[] memory _dexes) external onlyOwner {
+        for (uint256 i = 0; i < _dexes.length; i++) {
+            supportedDEXes.remove(_dexes[i]);
+        }
+    }
 
     function sweepTokens(IERC20 token) external onlyOwner {
         token.safeTransfer(msg.sender, token.balanceOf(address(this)));
     }
 
-    function collectFee(address _token, uint256 _amount) external onlyOwner {
-        require(collectedFee[_token] <= _amount, "not enough collected fee");
+    // TODO check for safety
+    // a person without fees collected will be reverted
+    function integratorCollectFee(address _token, uint256 _amount) external {
+        require(integratorCollectedFee[msg.sender][_token] <= _amount, "not enough fees");
+        if (_token == nativeWrap) {
+            IWETH(nativeWrap).withdraw(_amount);
+            (bool sent, ) = payable(msg.sender).call{value: _amount, gas: 50000}("");
+            require(sent, "failed to send native");
+        } else {
+            IERC20(_token).safeTransfer(msg.sender, _amount);
+        }
+        integratorCollectedFee[msg.sender][_token] -= _amount;
+    }
+
+    function rubicCollectFee(address _token, uint256 _amount) external onlyOwner {
+        require(collectedFee[_token] <= _amount, "amount to big");
         if (_token == nativeWrap) {
             IWETH(nativeWrap).withdraw(_amount);
             (bool sent, ) = payable(msg.sender).call{value: _amount, gas: 50000}("");

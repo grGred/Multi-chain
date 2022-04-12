@@ -160,7 +160,7 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
 
         // integrator fee is supposed not to be zero
         if (_integratorPercent > 0){
-            uint256 platformPercent = platformShare[_integrator];
+            uint256 _platformPercent = platformShare[_integrator];
 
             uint256 _integratorAndPlatformFee = FullMath.mulDiv(
                 _amountWithFee,
@@ -170,7 +170,7 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
 
             uint256 _platformFee = FullMath.mulDiv(
                 _integratorAndPlatformFee,
-                _integratorPercent,
+                _platformPercent,
                 1e6
             );
 
