@@ -321,6 +321,10 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         }
     }
 
+    function getSupportedDEXes() public view returns(address[] memory dexes) {
+        return supportedDEXes.values();
+    }
+
     function sweepTokens(IERC20 token) external onlyOwner {
         token.safeTransfer(msg.sender, token.balanceOf(address(this)));
     }

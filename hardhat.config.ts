@@ -14,7 +14,6 @@ const {
     POLYGONSCAN_API_KEY,
     MNEMONIC,
     INFURA_ID_PROJECT,
-    POLYGON_INFURA_KEY,
     BSC_RPC_KEY
 } = envConfig.parsed || {};
 
@@ -24,7 +23,7 @@ const DEFAULT_COMPILER_SETTINGS: SolcUserConfig = {
   settings: {
     optimizer: {
       enabled: true,
-      runs: 1_000,
+      runs: 10,
     },
     metadata: {
       bytecodeHash: 'none',
@@ -37,8 +36,13 @@ module.exports = {
     hardhat: {
       chainId: 137,
       forking: {
-        url: `https://polygon-mainnet.infura.io/v3/${POLYGON_INFURA_KEY}`,
-        blockNumber: 26536793 // hardcode block number to increase performance of the local cache
+        url: `https://polygon-rpc.com`,
+        blockNumber: 27081600 // hardcode block number to increase performance of the local cache
+      },
+      allowUnlimitedContractSize: true,
+      loggingEnabled: false,
+      accounts:{
+        count:100
       }
     },
     mainnet: {

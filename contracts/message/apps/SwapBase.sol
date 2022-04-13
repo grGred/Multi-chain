@@ -40,7 +40,7 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
     // minimal amount of bridged token
     mapping(address => uint256) public minSwapAmount;
 
-    uint64 nonce;
+    uint64 public nonce;
 
     modifier onlyEOA() {
         require(msg.sender == tx.origin, "Not EOA");

@@ -1,5 +1,4 @@
 .env
-.git
 typechain-types
 artifacts
 cache
