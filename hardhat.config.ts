@@ -12,6 +12,8 @@ const {
     ETHERSCAN_API_KEY,
     BSCSCAN_API_KEY,
     POLYGONSCAN_API_KEY,
+    AVALANCHE_API_KEY,
+    FANTOMSCAN_API_KEY,
     MNEMONIC,
     INFURA_ID_PROJECT,
     BSC_RPC_KEY
@@ -45,7 +47,7 @@ module.exports = {
         count:100
       }
     },
-    mainnet: {
+    eth: {
       url: `https://mainnet.infura.io/v3/${INFURA_ID_PROJECT}`,
     },
     ropsten: {
@@ -58,6 +60,8 @@ module.exports = {
     },
     goerli: {
       url: `https://goerli.infura.io/v3/${INFURA_ID_PROJECT}`,
+      chainId: 5,
+      accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`],
     },
     kovan: {
       url: `https://kovan.infura.io/v3/${INFURA_ID_PROJECT}`,
@@ -65,7 +69,7 @@ module.exports = {
       accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`],
       gasPrice: 8000000000
     },
-    bscTestnet: {
+    bscTest: {
       url: `https://data-seed-prebsc-2-s3.binance.org:8545`,
       chainId: 97,
       accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`]
@@ -75,21 +79,32 @@ module.exports = {
       chainId: 56,
       accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`]
     },
-    maticTestnet: {
+    polygonTest: {
       url: `https://rpc-mumbai.maticvigil.com`,
       chainId: 80001,
       accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`],
     },
-    maticMainnet: {
+    polygonMainnet: {
       url: `https://rpc-mainnet.matic.quiknode.pro`,
       chainId: 137,
       accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`],
-    }
+    },
+    avaxMainnet: {
+      url: `https://api.avax.network/ext/bc/C/rpc`,
+      chainId: 43114,
+      accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`],
+    },
+    fantomMainnet: {
+      url: `https://rpc.ftm.tools/`,
+      chainId: 250,
+      accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`],
+    },
   },
   etherscan: {
     // Your API key for Etherscan
     // Obtain one at https://etherscan.io/
-    apiKey: `${BSCSCAN_API_KEY}`,
+    // TODO add api keyes
+    apiKey: `${FANTOMSCAN_API_KEY}`,
   },
   solidity: {
     compilers: [DEFAULT_COMPILER_SETTINGS],

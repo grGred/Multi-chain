@@ -10,13 +10,6 @@
     "types": ["@nomiclabs/hardhat-ethers", "@nomiclabs/hardhat-waffle"],
     "noImplicitAny": false
   },
-  "contractSizer": {
-    "alphaSort": false,
-    "disambiguatePaths": true,
-    "runOnCompile": true,
-    "strict": false,
-    "only": [],
-  },
   "include": ["./test"],
   "files": ["./hardhat.config.ts"]
 }

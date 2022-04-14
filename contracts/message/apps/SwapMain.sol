@@ -23,7 +23,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
             supportedDEXes.add(_supportedDEXes[i]);
         }
         nativeWrap = _nativeWrap;
-        dstCryptoFee[5] = 10000000;
+        dstCryptoFee[43114] = 10000000;
         feeRubic = 1600; // 0.16%
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER, msg.sender);
