@@ -2,14 +2,14 @@
 
 pragma solidity 0.8.9;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
-import "../libraries/MsgDataTypes.sol";
-import "../libraries/MessageSenderLib.sol";
-import "./MessageBusAddress.sol";
+import '../libraries/MsgDataTypes.sol';
+import '../libraries/MessageSenderLib.sol';
+import './MessageBusAddress.sol';
 
-abstract contract MessageSenderApp is MessageBusAddress{
+abstract contract MessageSenderApp is MessageBusAddress {
     using SafeERC20 for IERC20;
 
     // ============== Utility functions called by apps ==============
@@ -107,7 +107,7 @@ abstract contract MessageSenderApp is MessageBusAddress{
                 _dstChainId,
                 _nonce,
                 _maxSlippage,
-                "", // empty message, which will not trigger sendMessage
+                '', // empty message, which will not trigger sendMessage
                 _bridgeSendType,
                 messageBus,
                 0

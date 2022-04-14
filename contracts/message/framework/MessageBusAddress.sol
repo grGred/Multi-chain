@@ -6,5 +6,4 @@ abstract contract MessageBusAddress {
     event MessageBusUpdated(address messageBus);
 
     address public messageBus;
-
 }

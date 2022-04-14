@@ -2,12 +2,12 @@
 
 pragma solidity 0.8.9;
 
-import "../../interfaces/IMessageReceiverApp.sol";
-import "./MessageBusAddress.sol";
+import '../../interfaces/IMessageReceiverApp.sol';
+import './MessageBusAddress.sol';
 
 abstract contract MessageReceiverApp is IMessageReceiverApp, MessageBusAddress {
     modifier onlyMessageBus() {
-        require(msg.sender == messageBus, "caller is not message bus");
+        require(msg.sender == messageBus, 'caller is not message bus');
         _;
     }
 

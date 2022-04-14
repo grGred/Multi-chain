@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.9;
 
-import "../interfaces/ISigsVerifier.sol";
+import '../interfaces/ISigsVerifier.sol';
 
 contract MessageBusSender {
     ISigsVerifier public immutable sigsVerifier;
@@ -45,9 +45,9 @@ contract MessageBusSender {
         uint256 _dstChainId,
         bytes calldata _message
     ) external payable {
-        require(_dstChainId != block.chainid, "Invalid chainId");
+        require(_dstChainId != block.chainid, 'Invalid chainId');
         uint256 minFee = calcFee(_message);
-        require(msg.value >= minFee, "Insufficient fee");
+        require(msg.value >= minFee, 'Insufficient fee');
         emit Message(msg.sender, _receiver, _dstChainId, _message, msg.value);
     }
 
@@ -69,9 +69,9 @@ contract MessageBusSender {
         bytes32 _srcTransferId,
         bytes calldata _message
     ) external payable {
-        require(_dstChainId != block.chainid, "Invalid chainId");
+        require(_dstChainId != block.chainid, 'Invalid chainId');
         uint256 minFee = calcFee(_message);
-        require(msg.value >= minFee, "Insufficient fee");
+        require(msg.value >= minFee, 'Insufficient fee');
         // SGN needs to verify
         // 1. msg.sender matches sender of the src transfer
         // 2. dstChainId matches dstChainId of the src transfer
@@ -95,13 +95,13 @@ contract MessageBusSender {
         address[] calldata _signers,
         uint256[] calldata _powers
     ) external {
-        bytes32 domain = keccak256(abi.encodePacked(block.chainid, address(this), "withdrawFee"));
+        bytes32 domain = keccak256(abi.encodePacked(block.chainid, address(this), 'withdrawFee'));
         sigsVerifier.verifySigs(abi.encodePacked(domain, _account, _cumulativeFee), _sigs, _signers, _powers);
         uint256 amount = _cumulativeFee - withdrawnFees[_account];
-        require(amount > 0, "No new amount to withdraw");
+        require(amount > 0, 'No new amount to withdraw');
         withdrawnFees[_account] = _cumulativeFee;
-        (bool sent, ) = _account.call{value: amount, gas: 50000}("");
-        require(sent, "failed to withdraw fee");
+        (bool sent, ) = _account.call{value: amount, gas: 50000}('');
+        require(sent, 'failed to withdraw fee');
     }
 
     /**

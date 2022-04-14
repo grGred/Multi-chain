@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.0;
 
-import "../message/libraries/MsgDataTypes.sol";
+import '../message/libraries/MsgDataTypes.sol';
 
 interface IMessageBus {
     function liquidityBridge() external view returns (address);

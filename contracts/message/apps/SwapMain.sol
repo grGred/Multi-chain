@@ -2,10 +2,10 @@
 
 pragma solidity >=0.8.9;
 
-import "./TransferSwapV2.sol";
-import "./TransferSwapV3.sol";
-import "./TransferSwapInch.sol";
-import "./BridgeSwap.sol";
+import './TransferSwapV2.sol';
+import './TransferSwapV3.sol';
+import './TransferSwapInch.sol';
+import './BridgeSwap.sol';
 
 contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwap {
     using SafeERC20 for IERC20;
@@ -29,7 +29,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         _setupRole(MANAGER, msg.sender);
     }
 
-     /**
+    /**
      * @notice called by MessageBus when the tokens are checked to be arrived at this contract's address.
                sends the amount received to the receiver. swaps beforehand if swap behavior is defined in message
      * NOTE: if the swap fails, it sends the tokens received directly to the receiver as fallback behavior
@@ -37,7 +37,8 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
      * @param _amount the amount of tokens received at this contract through the cross-chain bridge
      * @param _srcChainId source chain ID
      * @param _message SwapRequestV2 message that defines the swap behavior on this destination chain
-     */ // TODO reentrancy
+     */
+    // TODO reentrancy
     function executeMessageWithTransfer(
         address,
         address _token,
@@ -53,11 +54,9 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
 
         if (m.swap.version == SwapVersion.v3) {
             _executeDstSwapV3(_token, _amount, id, m);
-        }
-        else if (m.swap.version == SwapVersion.bridge) {
+        } else if (m.swap.version == SwapVersion.bridge) {
             _executeDstBridge(_token, _amount, id, m);
-        }
-        else if (m.swap.version == SwapVersion.v2) {
+        } else if (m.swap.version == SwapVersion.v2) {
             _executeDstSwapV2(_token, _amount, id, m);
         } else {
             _executeDstSwapInch(_token, _amount, id, m);
@@ -66,7 +65,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         return ExecutionStatus.Success;
     }
 
-     /**
+    /**
      * @notice called by MessageBus when the executeMessageWithTransfer call fails. does nothing but emitting a "fail" event
      * @param _srcChainId source chain ID
      * @param _message SwapRequest message that defines the swap behavior on this destination chain
@@ -81,12 +80,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
     ) external payable override onlyMessageBus returns (ExecutionStatus) {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
 
-        bytes32 id = _computeSwapRequestId(
-            m.receiver,
-            _srcChainId,
-            uint64(block.chainid),
-            _message
-        );
+        bytes32 id = _computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
 
         _sendToken(_token, _amount, m.receiver, m.nativeOut);
 
@@ -120,9 +114,9 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
     ) private {
         require(
             _token == _msgDst.swap.path[0],
-            "bridged token must be the same as the first token in destination swap path"
+            'bridged token must be the same as the first token in destination swap path'
         );
-        require(_msgDst.swap.path.length > 1, "dst swap expected");
+        require(_msgDst.swap.path.length > 1, 'dst swap expected');
 
         uint256 dstAmount;
         SwapStatus status = SwapStatus.Succeeded;
@@ -142,12 +136,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         }
 
         if (success) {
-            _sendToken(
-                _dstSwap.path[_dstSwap.path.length - 1],
-                dstAmount,
-                _msgDst.receiver,
-                _msgDst.nativeOut
-            );
+            _sendToken(_dstSwap.path[_dstSwap.path.length - 1], dstAmount, _msgDst.receiver, _msgDst.nativeOut);
             status = SwapStatus.Succeeded;
         } else {
             // handle swap failure, send the received token directly to receiver
@@ -168,15 +157,10 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
     ) private {
         require(
             _token == _msgDst.swap.path[0],
-            "bridged token must be the same as the first token in destination swap path"
+            'bridged token must be the same as the first token in destination swap path'
         );
-        require(_msgDst.swap.path.length == 1, "dst bridge expected");
-        _sendToken(
-            _msgDst.swap.path[0],
-            _amount,
-            _msgDst.receiver,
-            _msgDst.nativeOut
-        );
+        require(_msgDst.swap.path.length == 1, 'dst bridge expected');
+        _sendToken(_msgDst.swap.path[0], _amount, _msgDst.receiver, _msgDst.nativeOut);
         SwapStatus status = SwapStatus.Succeeded;
         emit SwapRequestDone(_id, _amount, status);
     }
@@ -190,10 +174,10 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         // TODO add as modifier
         require(
             _token == _msgDst.swap.path[0],
-            "bridged token must be the same as the first token in destination swap path"
+            'bridged token must be the same as the first token in destination swap path'
         );
         // TODO add as modifier
-        require(_msgDst.swap.path.length > 1, "dst swap expected");
+        require(_msgDst.swap.path.length > 1, 'dst swap expected');
 
         uint256 dstAmount;
         SwapStatus status = SwapStatus.Succeeded;
@@ -208,12 +192,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         bool success;
         (success, dstAmount) = _trySwapV2(_dstSwap, _amount);
         if (success) {
-            _sendToken(
-                _dstSwap.path[_dstSwap.path.length - 1],
-                dstAmount,
-                _msgDst.receiver,
-                _msgDst.nativeOut
-            );
+            _sendToken(_dstSwap.path[_dstSwap.path.length - 1], dstAmount, _msgDst.receiver, _msgDst.nativeOut);
             status = SwapStatus.Succeeded;
         } else {
             // handle swap failure, send the received token directly to receiver
@@ -235,9 +214,9 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
     ) private {
         require(
             _token == address(_getFirstBytes20(_msgDst.swap.dataInchOrPathV3)),
-            "bridged token must be the same as the first token in destination swap path"
+            'bridged token must be the same as the first token in destination swap path'
         );
-        require(_msgDst.swap.dataInchOrPathV3.length > 20, "dst swap expected");
+        require(_msgDst.swap.dataInchOrPathV3.length > 20, 'dst swap expected');
 
         uint256 dstAmount;
         SwapStatus status = SwapStatus.Succeeded;
@@ -252,12 +231,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         bool success;
         (success, dstAmount) = _trySwapV3(_dstSwap, _amount);
         if (success) {
-            _sendToken(
-                address(_getLastBytes20(_dstSwap.path)),
-                dstAmount,
-                _msgDst.receiver,
-                _msgDst.nativeOut
-            );
+            _sendToken(address(_getLastBytes20(_dstSwap.path)), dstAmount, _msgDst.receiver, _msgDst.nativeOut);
             status = SwapStatus.Succeeded;
         } else {
             // handle swap failure, send the received token directly to receiver
@@ -276,41 +250,36 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         bool _nativeOut
     ) private {
         if (_nativeOut) {
-            require(_token == nativeWrap, "token mismatch");
+            require(_token == nativeWrap, 'token mismatch');
             IWETH(nativeWrap).withdraw(_amount);
-            (bool sent, ) = _receiver.call{value: _amount, gas: 50000}("");
-            require(sent, "failed to send native");
+            (bool sent, ) = _receiver.call{value: _amount, gas: 50000}('');
+            require(sent, 'failed to send native');
         } else {
             IERC20(_token).safeTransfer(_receiver, _amount);
         }
     }
 
     function setRubicFee(uint256 _feeRubic) external onlyManager {
-        require(_feeRubic <= 1000000, "incorrect fee amount");
+        require(_feeRubic <= 1000000, 'incorrect fee amount');
         feeRubic = _feeRubic;
     }
 
     function setRubicShare(address _integrator, uint256 _percent) external onlyManager {
-        require(_percent <= 1000000, "incorrect fee amount");
+        require(_percent <= 1000000, 'incorrect fee amount');
         // require(_integrator != address(0)); TODO changed for tests
         platformShare[_integrator] = _percent;
     }
 
     // set to 0 to remove integrator
     function setIntegrator(address _integrator, uint256 _percent) external onlyManager {
-        require(_percent <= 1000000, "incorrect fee amount");
+        require(_percent <= 1000000, 'incorrect fee amount');
         // require(_integrator != address(0));
         integratorFee[_integrator] = _percent;
     }
 
-    function setCryptoFee(uint64 _networkID, uint256 _amount)
-        external
-        onlyManager
-
-    {
+    function setCryptoFee(uint64 _networkID, uint256 _amount) external onlyManager {
         dstCryptoFee[_networkID] = _amount;
     }
-
 
     function addSupportedDex(address[] memory _dexes) external onlyManager {
         for (uint256 i = 0; i < _dexes.length; i++) {
@@ -324,7 +293,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         }
     }
 
-    function getSupportedDEXes() public view returns(address[] memory dexes) {
+    function getSupportedDEXes() public view returns (address[] memory dexes) {
         return supportedDEXes.values();
     }
 
@@ -335,11 +304,11 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
     // TODO check for safety
     // a person without fees collected will be reverted
     function integratorCollectFee(address _token, uint256 _amount) external {
-        require(integratorCollectedFee[msg.sender][_token] <= _amount, "not enough fees");
+        require(integratorCollectedFee[msg.sender][_token] <= _amount, 'not enough fees');
         if (_token == nativeWrap) {
             IWETH(nativeWrap).withdraw(_amount);
-            (bool sent, ) = payable(msg.sender).call{value: _amount, gas: 50000}("");
-            require(sent, "failed to send native");
+            (bool sent, ) = payable(msg.sender).call{value: _amount, gas: 50000}('');
+            require(sent, 'failed to send native');
         } else {
             IERC20(_token).safeTransfer(msg.sender, _amount);
         }
@@ -347,11 +316,11 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
     }
 
     function rubicCollectFee(address _token, uint256 _amount) external onlyManager {
-        require(collectedFee[_token] <= _amount, "amount to big");
+        require(collectedFee[_token] <= _amount, 'amount to big');
         if (_token == nativeWrap) {
             IWETH(nativeWrap).withdraw(_amount);
-            (bool sent, ) = payable(msg.sender).call{value: _amount, gas: 50000}("");
-            require(sent, "failed to send native");
+            (bool sent, ) = payable(msg.sender).call{value: _amount, gas: 50000}('');
+            require(sent, 'failed to send native');
         } else {
             IERC20(_token).safeTransfer(msg.sender, _amount);
         }

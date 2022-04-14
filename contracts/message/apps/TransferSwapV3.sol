@@ -2,8 +2,8 @@
 
 pragma solidity >=0.8.9;
 
-import "./SwapBase.sol";
-import "../../interfaces/ISwapRouter.sol";
+import './SwapBase.sol';
+import '../../interfaces/ISwapRouter.sol';
 
 contract TransferSwapV3 is SwapBase {
     using SafeERC20 for IERC20;
@@ -18,12 +18,7 @@ contract TransferSwapV3 is SwapBase {
         address tokenOut
     );
 
-    event SwapRequestSentV3(
-        bytes32 id,
-        uint64 dstChainId,
-        uint256 srcAmount,
-        address srcToken
-    );
+    event SwapRequestSentV3(bytes32 id, uint64 dstChainId, uint256 srcAmount, address srcToken);
 
     function transferWithSwapV3Native(
         address _receiver, // transfer swap contract in dst chain
@@ -34,11 +29,8 @@ contract TransferSwapV3 is SwapBase {
         uint32 _maxBridgeSlippage,
         bool _nativeOut
     ) external payable onlyEOA {
-        require(
-            address(_getFirstBytes20(_srcSwap.path)) == nativeWrap,
-            "token mismatch"
-        );
-        require(msg.value >= _amountIn, "Amount insufficient");
+        require(address(_getFirstBytes20(_srcSwap.path)) == nativeWrap, 'token mismatch');
+        require(msg.value >= _amountIn, 'Amount insufficient');
         IWETH(nativeWrap).deposit{value: _amountIn}();
 
         uint256 _fee = _calculateCryptoFee(msg.value - _amountIn, _dstChainId);
@@ -64,11 +56,7 @@ contract TransferSwapV3 is SwapBase {
         uint32 _maxBridgeSlippage,
         bool _nativeOut
     ) external payable onlyEOA {
-        IERC20(address(_getFirstBytes20(_srcSwap.path))).safeTransferFrom(
-            msg.sender,
-            address(this),
-            _amountIn
-        );
+        IERC20(address(_getFirstBytes20(_srcSwap.path))).safeTransferFrom(msg.sender, address(this), _amountIn);
 
         uint256 _fee = _calculateCryptoFee(msg.value, _dstChainId);
 
@@ -111,10 +99,7 @@ contract TransferSwapV3 is SwapBase {
         nonce += 1;
         uint64 chainId = uint64(block.chainid);
 
-        require(
-            _srcSwap.path.length > 20 && _dstChainId != chainId,
-            "empty src swap path or same chain id"
-        );
+        require(_srcSwap.path.length > 20 && _dstChainId != chainId, 'empty src swap path or same chain id');
 
         address srcTokenOut = address(_getLastBytes20(_srcSwap.path));
         uint256 srcAmtOut = _amountIn;
@@ -123,27 +108,27 @@ contract TransferSwapV3 is SwapBase {
         if (_srcSwap.path.length > 20) {
             bool success;
             (success, srcAmtOut) = _trySwapV3(_srcSwap, _amountIn);
-            if (!success) revert("src swap failed");
+            if (!success) revert('src swap failed');
         }
 
         require(
             srcAmtOut >= minSwapAmount[address(_getLastBytes20(_srcSwap.path))],
-            "amount must be greater than min swap amount"
+            'amount must be greater than min swap amount'
         );
 
         _crossChainTransferWithSwapV3(
-                _receiver,
-                _amountIn,
-                chainId,
-                _dstChainId,
-                _srcSwap,
-                _dstSwap,
-                _maxBridgeSlippage,
-                nonce,
-                _nativeOut,
-                _fee,
-                srcTokenOut,
-                srcAmtOut
+            _receiver,
+            _amountIn,
+            chainId,
+            _dstChainId,
+            _srcSwap,
+            _dstSwap,
+            _maxBridgeSlippage,
+            nonce,
+            _nativeOut,
+            _fee,
+            srcTokenOut,
+            srcAmtOut
         );
     }
 
@@ -159,17 +144,8 @@ contract TransferSwapV3 is SwapBase {
         // no need to bridge, directly send the tokens to user
         IERC20(srcTokenOut).safeTransfer(_receiver, srcAmtOut);
         // use uint64 for chainid to be consistent with other components in the system
-        bytes32 id = keccak256(
-            abi.encode(msg.sender, _chainId, _receiver, _nonce, _srcSwap)
-        );
-        emit DirectSwapV3(
-            id,
-            _chainId,
-            _amountIn,
-            address(_getFirstBytes20(_srcSwap.path)),
-            srcAmtOut,
-            srcTokenOut
-        );
+        bytes32 id = keccak256(abi.encode(msg.sender, _chainId, _receiver, _nonce, _srcSwap));
+        emit DirectSwapV3(id, _chainId, _amountIn, address(_getFirstBytes20(_srcSwap.path)), srcAmtOut, srcTokenOut);
     }
 
     function _crossChainTransferWithSwapV3(
@@ -186,21 +162,11 @@ contract TransferSwapV3 is SwapBase {
         address srcTokenOut,
         uint256 srcAmtOut
     ) private {
-        require(_dstSwap.path.length > 0, "empty dst swap path");
+        require(_dstSwap.path.length > 0, 'empty dst swap path');
         bytes memory message = abi.encode(
-            SwapRequestDest({
-                swap: _dstSwap,
-                receiver: msg.sender,
-                nonce: _nonce,
-                nativeOut: _nativeOut
-            })
+            SwapRequestDest({swap: _dstSwap, receiver: msg.sender, nonce: _nonce, nativeOut: _nativeOut})
         );
-        bytes32 id = _computeSwapRequestId(
-            msg.sender,
-            _chainId,
-            _dstChainId,
-            message
-        );
+        bytes32 id = _computeSwapRequestId(msg.sender, _chainId, _dstChainId, message);
 
         sendMessageWithTransfer(
             _receiver,
@@ -214,40 +180,26 @@ contract TransferSwapV3 is SwapBase {
             _fee
         );
 
-        emit SwapRequestSentV3(
-            id,
-            _dstChainId,
-            _amountIn,
-            address(_getFirstBytes20(_srcSwap.path))
-        );
+        emit SwapRequestSentV3(id, _dstChainId, _amountIn, address(_getFirstBytes20(_srcSwap.path)));
     }
 
-    function _trySwapV3(SwapInfoV3 memory _swap, uint256 _amount)
-        internal
-        returns (bool ok, uint256 amountOut)
-    {
+    function _trySwapV3(SwapInfoV3 memory _swap, uint256 _amount) internal returns (bool ok, uint256 amountOut) {
         uint256 zero;
         /*
         if (!supportedDex[_swap.dex]) {
             return (false, zero);
         }*/
-        IERC20(address(_getFirstBytes20(_swap.path))).safeIncreaseAllowance(
-            _swap.dex,
-            _amount
+        IERC20(address(_getFirstBytes20(_swap.path))).safeIncreaseAllowance(_swap.dex, _amount);
+
+        IUniswapRouterV3.ExactInputParams memory paramsV3 = IUniswapRouterV3.ExactInputParams(
+            _swap.path,
+            address(this),
+            _swap.deadline,
+            _amount,
+            _swap.amountOutMinimum
         );
 
-        IUniswapRouterV3.ExactInputParams memory paramsV3 = IUniswapRouterV3
-            .ExactInputParams(
-                _swap.path,
-                address(this),
-                _swap.deadline,
-                _amount,
-                _swap.amountOutMinimum
-            );
-
-        try IUniswapRouterV3(_swap.dex).exactInput(paramsV3) returns (
-            uint256 _amountOut
-        ) {
+        try IUniswapRouterV3(_swap.dex).exactInput(paramsV3) returns (uint256 _amountOut) {
             return (true, _amountOut);
         } catch {
             return (false, zero);

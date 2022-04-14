@@ -2,14 +2,14 @@
 
 pragma solidity >=0.8.9;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import '@openzeppelin/contracts/access/AccessControl.sol';
-import "../framework/MessageSenderApp.sol";
-import "../framework/MessageReceiverApp.sol";
-import "../../interfaces/IWETH.sol";
-import "../libraries/FullMath.sol";
+import '../framework/MessageSenderApp.sol';
+import '../framework/MessageReceiverApp.sol';
+import '../../interfaces/IWETH.sol';
+import '../libraries/FullMath.sol';
 
 contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControl {
     using SafeERC20 for IERC20;
@@ -52,7 +52,7 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControl {
     }
 
     modifier onlyEOA() {
-        require(msg.sender == tx.origin, "Not EOA");
+        require(msg.sender == tx.origin, 'Not EOA');
         _;
     }
 
@@ -121,22 +121,14 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControl {
     }
 
     // returns address of first token for V3
-    function _getFirstBytes20(bytes memory input)
-        internal
-        pure
-        returns (bytes20 result)
-    {
+    function _getFirstBytes20(bytes memory input) internal pure returns (bytes20 result) {
         assembly {
             result := mload(add(input, 32))
         }
     }
 
     // returns address of tokenOut for V3
-    function _getLastBytes20(bytes memory input)
-        internal
-        pure
-        returns (bytes20 result)
-    {
+    function _getLastBytes20(bytes memory input) internal pure returns (bytes20 result) {
         uint256 offset = input.length + 12;
         assembly {
             result := mload(add(input, offset))
@@ -149,10 +141,7 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControl {
         uint64 _dstChainId,
         bytes memory _message
     ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(_sender, _srcChainId, _dstChainId, _message)
-            );
+        return keccak256(abi.encodePacked(_sender, _srcChainId, _dstChainId, _message));
     }
 
     // ============== fee logic ==============
@@ -164,35 +153,27 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControl {
         return (_updatedFee);
     }
 
-    function _calculatePlatformFee(address _integrator, address _token, uint256 _amountWithFee) internal returns(uint256 amountWithoutFee) {
+    function _calculatePlatformFee(
+        address _integrator,
+        address _token,
+        uint256 _amountWithFee
+    ) internal returns (uint256 amountWithoutFee) {
         uint256 _integratorPercent = integratorFee[_integrator];
 
         // integrator fee is supposed not to be zero
-        if (_integratorPercent > 0){
+        if (_integratorPercent > 0) {
             uint256 _platformPercent = platformShare[_integrator];
 
-            uint256 _integratorAndPlatformFee = FullMath.mulDiv(
-                _amountWithFee,
-                _integratorPercent,
-                1e6
-            );
+            uint256 _integratorAndPlatformFee = FullMath.mulDiv(_amountWithFee, _integratorPercent, 1e6);
 
-            uint256 _platformFee = FullMath.mulDiv(
-                _integratorAndPlatformFee,
-                _platformPercent,
-                1e6
-            );
+            uint256 _platformFee = FullMath.mulDiv(_integratorAndPlatformFee, _platformPercent, 1e6);
 
             integratorCollectedFee[_integrator][_token] += _integratorAndPlatformFee - _platformFee;
             collectedFee[_token] += _platformFee;
 
             amountWithoutFee = _amountWithFee - _integratorAndPlatformFee;
         } else {
-            amountWithoutFee = FullMath.mulDiv(
-                _amountWithFee,
-                1e6 - feeRubic,
-                1e6
-            );
+            amountWithoutFee = FullMath.mulDiv(_amountWithFee, 1e6 - feeRubic, 1e6);
 
             collectedFee[_token] += _amountWithFee - amountWithoutFee;
         }
@@ -217,7 +198,6 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControl {
             }
         }
     }
-
 
     // This is needed to receive ETH when calling `IWETH.withdraw`
     receive() external payable {}
