@@ -25,6 +25,8 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         nativeWrap = _nativeWrap;
         dstCryptoFee[5] = 10000000;
         feeRubic = 1600; // 0.16%
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(MANAGER, msg.sender);
     }
 
      /**
@@ -283,19 +285,19 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         }
     }
 
-    function setRubicFee(uint256 _feeRubic) external onlyOwner {
+    function setRubicFee(uint256 _feeRubic) external onlyManager {
         require(_feeRubic <= 1000000, "incorrect fee amount");
         feeRubic = _feeRubic;
     }
 
-    function setRubicShare(address _integrator, uint256 _percent) external onlyOwner {
+    function setRubicShare(address _integrator, uint256 _percent) external onlyManager {
         require(_percent <= 1000000, "incorrect fee amount");
         // require(_integrator != address(0)); TODO changed for tests
         platformShare[_integrator] = _percent;
     }
 
     // set to 0 to remove integrator
-    function setIntegrator(address _integrator, uint256 _percent) external onlyOwner {
+    function setIntegrator(address _integrator, uint256 _percent) external onlyManager {
         require(_percent <= 1000000, "incorrect fee amount");
         // require(_integrator != address(0));
         integratorFee[_integrator] = _percent;
@@ -303,19 +305,20 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
 
     function setCryptoFee(uint64 _networkID, uint256 _amount)
         external
-        onlyOwner
+        onlyManager
+
     {
         dstCryptoFee[_networkID] = _amount;
     }
 
 
-    function addSupportedDex(address[] memory _dexes) external onlyOwner {
+    function addSupportedDex(address[] memory _dexes) external onlyManager {
         for (uint256 i = 0; i < _dexes.length; i++) {
             supportedDEXes.add(_dexes[i]);
         }
     }
 
-    function removeSupportedDex(address[] memory _dexes) external onlyOwner {
+    function removeSupportedDex(address[] memory _dexes) external onlyManager {
         for (uint256 i = 0; i < _dexes.length; i++) {
             supportedDEXes.remove(_dexes[i]);
         }
@@ -325,7 +328,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         return supportedDEXes.values();
     }
 
-    function sweepTokens(IERC20 token) external onlyOwner {
+    function sweepTokens(IERC20 token) external onlyManager {
         token.safeTransfer(msg.sender, token.balanceOf(address(this)));
     }
 
@@ -343,7 +346,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         integratorCollectedFee[msg.sender][_token] -= _amount;
     }
 
-    function rubicCollectFee(address _token, uint256 _amount) external onlyOwner {
+    function rubicCollectFee(address _token, uint256 _amount) external onlyManager {
         require(collectedFee[_token] <= _amount, "amount to big");
         if (_token == nativeWrap) {
             IWETH(nativeWrap).withdraw(_amount);
@@ -355,7 +358,12 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         collectedFee[_token] -= _amount;
     }
 
-    function setNativeWrap(address _nativeWrap) external onlyOwner {
+    function setNativeWrap(address _nativeWrap) external onlyManager {
         nativeWrap = _nativeWrap;
+    }
+
+    function setMessageBus(address _messageBus) public onlyManager {
+        messageBus = _messageBus;
+        emit MessageBusUpdated(messageBus);
     }
 }

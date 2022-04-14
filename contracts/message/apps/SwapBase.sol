@@ -5,13 +5,13 @@ pragma solidity >=0.8.9;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
-import "../framework/MessageBusAddress.sol";
+import '@openzeppelin/contracts/access/AccessControl.sol';
 import "../framework/MessageSenderApp.sol";
 import "../framework/MessageReceiverApp.sol";
 import "../../interfaces/IWETH.sol";
 import "../libraries/FullMath.sol";
 
-contract SwapBase is MessageSenderApp, MessageReceiverApp {
+contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControl {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -41,6 +41,15 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp {
     mapping(address => uint256) public minSwapAmount;
 
     uint64 public nonce;
+
+    // Role of the manager
+    bytes32 public constant MANAGER = keccak256('MANAGER');
+
+    /// @dev This modifier prevents using manager functions
+    modifier onlyManager() {
+        require(hasRole(MANAGER, msg.sender), 'Caller is not a manager');
+        _;
+    }
 
     modifier onlyEOA() {
         require(msg.sender == tx.origin, "Not EOA");

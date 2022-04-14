@@ -2,17 +2,16 @@
 
 pragma solidity 0.8.9;
 
-import "../libraries/MsgDataTypes.sol";
+import "../message/libraries/MsgDataTypes.sol";
 import "../interfaces/IMessageReceiverApp.sol";
 import "../interfaces/IMessageBus.sol";
-import "../../interfaces/IBridge.sol";
-import "../../interfaces/IOriginalTokenVault.sol";
-import "../../interfaces/IOriginalTokenVaultV2.sol";
-import "../../interfaces/IPeggedTokenBridge.sol";
-import "../../interfaces/IPeggedTokenBridgeV2.sol";
-import "../../safeguard/Ownable.sol";
+import "../interfaces/IBridge.sol";
+import "../interfaces/IOriginalTokenVault.sol";
+import "../interfaces/IOriginalTokenVaultV2.sol";
+import "../interfaces/IPeggedTokenBridge.sol";
+import "../interfaces/IPeggedTokenBridgeV2.sol";
 
-contract MessageBusReceiver is Ownable {
+contract MessageBusReceiver  {
     mapping(bytes32 => MsgDataTypes.TxStatus) public executedMessages;
 
     address public liquidityBridge; // liquidity bridge address
@@ -550,37 +549,37 @@ contract MessageBusReceiver is Ownable {
 
     // ================= contract config =================
 
-    function setLiquidityBridge(address _addr) public onlyOwner {
+    function setLiquidityBridge(address _addr) public {
         require(_addr != address(0), "invalid address");
         liquidityBridge = _addr;
         emit LiquidityBridgeUpdated(liquidityBridge);
     }
 
-    function setPegBridge(address _addr) public onlyOwner {
+    function setPegBridge(address _addr) public {
         require(_addr != address(0), "invalid address");
         pegBridge = _addr;
         emit PegBridgeUpdated(pegBridge);
     }
 
-    function setPegVault(address _addr) public onlyOwner {
+    function setPegVault(address _addr) public {
         require(_addr != address(0), "invalid address");
         pegVault = _addr;
         emit PegVaultUpdated(pegVault);
     }
 
-    function setPegBridgeV2(address _addr) public onlyOwner {
+    function setPegBridgeV2(address _addr) public {
         require(_addr != address(0), "invalid address");
         pegBridgeV2 = _addr;
         emit PegBridgeV2Updated(pegBridgeV2);
     }
 
-    function setPegVaultV2(address _addr) public onlyOwner {
+    function setPegVaultV2(address _addr) public {
         require(_addr != address(0), "invalid address");
         pegVaultV2 = _addr;
         emit PegVaultV2Updated(pegVaultV2);
     }
 
-    function setPreExecuteMessageGasUsage(uint256 _usage) public onlyOwner {
+    function setPreExecuteMessageGasUsage(uint256 _usage) public {
         preExecuteMessageGasUsage = _usage;
     }
 }

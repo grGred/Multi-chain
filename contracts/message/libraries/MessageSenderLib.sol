@@ -9,7 +9,7 @@ import "../../interfaces/IOriginalTokenVault.sol";
 import "../../interfaces/IOriginalTokenVaultV2.sol";
 import "../../interfaces/IPeggedTokenBridge.sol";
 import "../../interfaces/IPeggedTokenBridgeV2.sol";
-import "../interfaces/IMessageBus.sol";
+import "../../interfaces/IMessageBus.sol";
 import "./MsgDataTypes.sol";
 
 library MessageSenderLib {

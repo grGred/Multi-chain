@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.9;
 
-import "../interfaces/IMessageReceiverApp.sol";
+import "../../interfaces/IMessageReceiverApp.sol";
 import "./MessageBusAddress.sol";
 
 abstract contract MessageReceiverApp is IMessageReceiverApp, MessageBusAddress {

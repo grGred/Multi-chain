@@ -2,10 +2,9 @@
 
 pragma solidity 0.8.9;
 
-import "../../safeguard/Ownable.sol";
-import "../../interfaces/ISigsVerifier.sol";
+import "../interfaces/ISigsVerifier.sol";
 
-contract MessageBusSender is Ownable {
+contract MessageBusSender {
     ISigsVerifier public immutable sigsVerifier;
 
     uint256 public feeBase;
@@ -116,12 +115,12 @@ contract MessageBusSender is Ownable {
 
     // -------------------- Admin --------------------
 
-    function setFeePerByte(uint256 _fee) external onlyOwner {
+    function setFeePerByte(uint256 _fee) external {
         feePerByte = _fee;
         emit FeePerByteUpdated(feePerByte);
     }
 
-    function setFeeBase(uint256 _fee) external onlyOwner {
+    function setFeeBase(uint256 _fee) external {
         feeBase = _fee;
         emit FeeBaseUpdated(feeBase);
     }

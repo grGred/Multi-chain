@@ -260,7 +260,7 @@ describe('RubicCrossChain', () => {
                     .withArgs(ID, DST_CHAIN_ID, DEFAULT_AMOUNT_IN, swapToken.address);
             });
         });
-        describe.only('#executeMessageWithTransfer', () => {
+        describe('#executeMessageWithTransfer', () => {
             beforeEach('setup for target executions', async () => {
                 // transfer 1000 USDC
                 await transitToken.transfer(swapMain.address, 1000000000);
