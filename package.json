@@ -18,7 +18,6 @@
     "dotenv": "^10.0.0",
     "ganache-core": "^2.13.2",
     "hardhat": "^2.7.0",
-    "hardhat-contract-sizer": "^2.1.1",
     "truffle-plugin-verify": "^0.5.15",
     "web3": "^1.6.0"
   },
@@ -38,6 +37,7 @@
     "eslint-plugin-import": "^2.24.2",
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-unused-imports": "^1.1.5",
+    "hardhat-contract-sizer": "^2.5.1",
     "prettier": "^2.5.1",
     "prettier-plugin-solidity": "^1.0.0-beta.18",
     "solhint": "^3.3.6",
