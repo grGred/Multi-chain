@@ -6,8 +6,8 @@ import './SwapBase.sol';
 import '../../interfaces/ISwapRouter.sol';
 
 contract TransferSwapV3 is SwapBase {
-    using SafeERC20 for IERC20;
-    using EnumerableSet for EnumerableSet.AddressSet;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     event DirectSwapV3(
         bytes32 id,
@@ -21,14 +21,14 @@ contract TransferSwapV3 is SwapBase {
     event SwapRequestSentV3(bytes32 id, uint64 dstChainId, uint256 srcAmount, address srcToken);
 
     function transferWithSwapV3Native(
-        address _receiver, // transfer swap contract in dst chain
+        address _receiver,
         uint256 _amountIn,
         uint64 _dstChainId,
         SwapInfoV3 calldata _srcSwap,
         SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
         bool _nativeOut
-    ) external payable onlyEOA {
+    ) external payable onlyEOA whenNotPaused {
         require(address(_getFirstBytes20(_srcSwap.path)) == nativeWrap, 'token mismatch');
         require(msg.value >= _amountIn, 'Amount insufficient');
         IWETH(nativeWrap).deposit{value: _amountIn}();
@@ -48,15 +48,15 @@ contract TransferSwapV3 is SwapBase {
     }
 
     function transferWithSwapV3(
-        address _receiver, // transfer swap contract in dst chain
+        address _receiver,
         uint256 _amountIn,
         uint64 _dstChainId,
         SwapInfoV3 calldata _srcSwap,
         SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
         bool _nativeOut
-    ) external payable onlyEOA {
-        IERC20(address(_getFirstBytes20(_srcSwap.path))).safeTransferFrom(msg.sender, address(this), _amountIn);
+    ) external payable onlyEOA whenNotPaused {
+        IERC20Upgradeable(address(_getFirstBytes20(_srcSwap.path))).safeTransferFrom(msg.sender, address(this), _amountIn);
 
         uint256 _fee = _calculateCryptoFee(msg.value, _dstChainId);
 
@@ -142,7 +142,7 @@ contract TransferSwapV3 is SwapBase {
         uint256 srcAmtOut
     ) private {
         // no need to bridge, directly send the tokens to user
-        IERC20(srcTokenOut).safeTransfer(_receiver, srcAmtOut);
+        IERC20Upgradeable(srcTokenOut).safeTransfer(_receiver, srcAmtOut);
         // use uint64 for chainid to be consistent with other components in the system
         bytes32 id = keccak256(abi.encode(msg.sender, _chainId, _receiver, _nonce, _srcSwap));
         emit DirectSwapV3(id, _chainId, _amountIn, address(_getFirstBytes20(_srcSwap.path)), srcAmtOut, srcTokenOut);
@@ -185,11 +185,11 @@ contract TransferSwapV3 is SwapBase {
 
     function _trySwapV3(SwapInfoV3 memory _swap, uint256 _amount) internal returns (bool ok, uint256 amountOut) {
         uint256 zero;
-        /*
-        if (!supportedDex[_swap.dex]) {
-            return (false, zero);
-        }*/
-        IERC20(address(_getFirstBytes20(_swap.path))).safeIncreaseAllowance(_swap.dex, _amount);
+        if (!supportedDEXes.contains(_swap.dex)) {
+            return (false, 0);
+        }
+
+        smartApprove(IERC20Upgradeable(address(_getFirstBytes20(_swap.path))), _amount, _swap.dex);
 
         IUniswapRouterV3.ExactInputParams memory paramsV3 = IUniswapRouterV3.ExactInputParams(
             _swap.path,

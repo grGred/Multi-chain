@@ -6,18 +6,19 @@ import './TransferSwapV2.sol';
 import './TransferSwapV3.sol';
 import './TransferSwapInch.sol';
 import './BridgeSwap.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 
-contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwap {
-    using SafeERC20 for IERC20;
-    using EnumerableSet for EnumerableSet.AddressSet;
+contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwap, ReentrancyGuardUpgradeable  {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     event SwapRequestDone(bytes32 id, uint256 dstAmount, SwapStatus status);
 
-    constructor(
+    function initialize(
         address _messageBus,
         address[] memory _supportedDEXes,
         address _nativeWrap
-    ) {
+    ) public {
         messageBus = _messageBus;
         for (uint256 i = 0; i < _supportedDEXes.length; i++) {
             supportedDEXes.add(_supportedDEXes[i]);
@@ -27,6 +28,10 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         feeRubic = 1600; // 0.16%
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER, msg.sender);
+
+        __ReentrancyGuard_init();
+        __Pausable_init();
+        __AccessControl_init();
     }
 
     /**
@@ -46,10 +51,11 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         uint64 _srcChainId,
         bytes memory _message,
         address
-    ) external payable override onlyMessageBus returns (ExecutionStatus) {
+    ) external payable override onlyMessageBus nonReentrant whenNotPaused returns (ExecutionStatus) {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
         bytes32 id = _computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
 
+        // TODO caller is our executor only
         _amount = _calculatePlatformFee(m.swap.integrator, _token, _amount);
 
         if (m.swap.version == SwapVersion.v3) {
@@ -77,7 +83,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         uint64 _srcChainId,
         bytes memory _message,
         address // executor
-    ) external payable override onlyMessageBus returns (ExecutionStatus) {
+    ) external payable override onlyMessageBus nonReentrant returns (ExecutionStatus) {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
 
         bytes32 id = _computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
@@ -96,7 +102,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         uint256 _amount,
         bytes calldata _message,
         address // executor
-    ) external payable override onlyMessageBus returns (ExecutionStatus) {
+    ) external payable override onlyMessageBus nonReentrant returns (ExecutionStatus) {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
         if (m.swap.version == SwapVersion.v3) {
             _sendToken(_token, _amount, m.receiver, m.nativeOut);
@@ -255,7 +261,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
             (bool sent, ) = _receiver.call{value: _amount, gas: 50000}('');
             require(sent, 'failed to send native');
         } else {
-            IERC20(_token).safeTransfer(_receiver, _amount);
+            IERC20Upgradeable(_token).safeTransfer(_receiver, _amount);
         }
     }
 
@@ -297,7 +303,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
         return supportedDEXes.values();
     }
 
-    function sweepTokens(IERC20 token) external onlyManager {
+    function sweepTokens(IERC20Upgradeable token) external onlyManager {
         token.safeTransfer(msg.sender, token.balanceOf(address(this)));
     }
 
@@ -310,7 +316,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
             (bool sent, ) = payable(msg.sender).call{value: _amount, gas: 50000}('');
             require(sent, 'failed to send native');
         } else {
-            IERC20(_token).safeTransfer(msg.sender, _amount);
+            IERC20Upgradeable(_token).safeTransfer(msg.sender, _amount);
         }
         integratorCollectedFee[msg.sender][_token] -= _amount;
     }
@@ -322,7 +328,7 @@ contract SwapMain is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwa
             (bool sent, ) = payable(msg.sender).call{value: _amount, gas: 50000}('');
             require(sent, 'failed to send native');
         } else {
-            IERC20(_token).safeTransfer(msg.sender, _amount);
+            IERC20Upgradeable(_token).safeTransfer(msg.sender, _amount);
         }
         collectedFee[_token] -= _amount;
     }

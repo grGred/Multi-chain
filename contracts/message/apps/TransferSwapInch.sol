@@ -5,9 +5,9 @@ pragma solidity >=0.8.9;
 import './SwapBase.sol';
 
 contract TransferSwapInch is SwapBase {
-    using Address for address payable;
-    using SafeERC20 for IERC20;
-    using EnumerableSet for EnumerableSet.AddressSet;
+    using AddressUpgradeable for address payable;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     event DirectSwapInch(
         bytes32 id,
@@ -28,7 +28,7 @@ contract TransferSwapInch is SwapBase {
         SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
         bool _nativeOut
-    ) external payable onlyEOA {
+    ) external payable onlyEOA whenNotPaused {
         require(_srcSwap.path[0] == nativeWrap, 'token mismatch');
         require(msg.value >= _amountIn, 'Amount insufficient');
         IWETH(nativeWrap).deposit{value: _amountIn}();
@@ -55,8 +55,8 @@ contract TransferSwapInch is SwapBase {
         SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
         bool _nativeOut
-    ) external payable onlyEOA {
-        IERC20(_srcSwap.path[0]).safeTransferFrom(msg.sender, address(this), _amountIn);
+    ) external payable onlyEOA whenNotPaused {
+        IERC20Upgradeable(_srcSwap.path[0]).safeTransferFrom(msg.sender, address(this), _amountIn);
 
         uint256 _fee = _calculateCryptoFee(msg.value, _dstChainId);
 
@@ -146,7 +146,7 @@ contract TransferSwapInch is SwapBase {
         uint256 srcAmtOut
     ) private {
         // no need to bridge, directly send the tokens to user
-        IERC20(srcTokenOut).safeTransfer(_receiver, srcAmtOut);
+        IERC20Upgradeable(srcTokenOut).safeTransfer(_receiver, srcAmtOut);
         // use uint64 for chainid to be consistent with other components in the system
         bytes32 id = keccak256(abi.encode(msg.sender, _chainId, _receiver, _nonce, _srcSwap));
         emit DirectSwapInch(id, _chainId, _amountIn, _srcSwap.path[0], srcAmtOut, srcTokenOut);
@@ -194,9 +194,9 @@ contract TransferSwapInch is SwapBase {
             return (false, 0);
         }
 
-        safeApprove(IERC20(_swap.path[0]), _amount, _swap.dex);
+        smartApprove(IERC20Upgradeable(_swap.path[0]), _amount, _swap.dex);
 
-        IERC20 Transit = IERC20(_swap.path[_swap.path.length - 1]);
+        IERC20Upgradeable Transit = IERC20Upgradeable(_swap.path[_swap.path.length - 1]);
         uint256 transitBalanceBefore = Transit.balanceOf(address(this));
 
         Address.functionCallWithValue(_swap.dex, _swap.data, _amount);
@@ -215,9 +215,9 @@ contract TransferSwapInch is SwapBase {
             return (false, 0);
         }
 
-        safeApprove(IERC20(_swap.path[0]), _amount, _swap.dex);
+        smartApprove(IERC20Upgradeable(_swap.path[0]), _amount, _swap.dex);
 
-        IERC20 Transit = IERC20(_swap.path[_swap.path.length - 1]);
+        IERC20Upgradeable Transit = IERC20Upgradeable(_swap.path[_swap.path.length - 1]);
         uint256 transitBalanceBefore = Transit.balanceOf(address(this));
 
         Address.functionCall(_swap.dex, _swap.data);
