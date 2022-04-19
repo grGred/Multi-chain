@@ -60,11 +60,10 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
             _executeDstSwapV3(_token, _amount, id, m);
         } else if (m.swap.version == SwapVersion.bridge) {
             _executeDstBridge(_token, _amount, id, m);
-        } else if (m.swap.version == SwapVersion.v2) {
-            _executeDstSwapV2(_token, _amount, id, m);
         } else {
-            _executeDstSwapInch(_token, _amount, id, m);
+            _executeDstSwapV2(_token, _amount, id, m);
         }
+
         // always return true since swap failure is already handled in-place
         return ExecutionStatus.Success;
     }
@@ -108,48 +107,6 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
             _sendToken(m.swap.path[m.swap.path.length - 1], _amount, m.receiver, m.nativeOut);
         }
         return ExecutionStatus.Success;
-    }
-
-    function _executeDstSwapInch(
-        address _token,
-        uint256 _amount,
-        bytes32 _id,
-        SwapRequestDest memory _msgDst
-    ) private {
-        require(
-            _token == _msgDst.swap.path[0],
-            'bridged token must be the same as the first token in destination swap path'
-        );
-        require(_msgDst.swap.path.length > 1, 'dst swap expected');
-
-        uint256 dstAmount;
-        SwapStatus status = SwapStatus.Succeeded;
-
-        SwapInfoInch memory _dstSwap = SwapInfoInch({
-            dex: _msgDst.swap.dex,
-            path: _msgDst.swap.path,
-            data: _msgDst.swap.dataInchOrPathV3,
-            amountOutMinimum: _msgDst.swap.amountOutMinimum
-        });
-
-        bool success;
-        if (_dstSwap.path[0] == nativeWrap) {
-            (success, dstAmount) = _trySwapNativeInch(_dstSwap, _amount);
-        } else {
-            (success, dstAmount) = _trySwapInch(_dstSwap, _amount);
-        }
-
-        if (success) {
-            _sendToken(_dstSwap.path[_dstSwap.path.length - 1], dstAmount, _msgDst.receiver, _msgDst.nativeOut);
-            status = SwapStatus.Succeeded;
-        } else {
-            // handle swap failure, send the received token directly to receiver
-            _sendToken(_token, _amount, _msgDst.receiver, false);
-            dstAmount = _amount;
-            status = SwapStatus.Fallback;
-        }
-
-        emit SwapRequestDone(_id, dstAmount, status);
     }
 
     // no need to swap, directly send the bridged token to user
@@ -217,17 +174,17 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         SwapRequestDest memory _msgDst
     ) private {
         require(
-            _token == address(_getFirstBytes20(_msgDst.swap.dataInchOrPathV3)),
+            _token == address(_getFirstBytes20(_msgDst.swap.pathV3)),
             'bridged token must be the same as the first token in destination swap path'
         );
-        require(_msgDst.swap.dataInchOrPathV3.length > 20, 'dst swap expected');
+        require(_msgDst.swap.pathV3.length > 20, 'dst swap expected');
 
         uint256 dstAmount;
         SwapStatus status = SwapStatus.Succeeded;
 
         SwapInfoV3 memory _dstSwap = SwapInfoV3({
             dex: _msgDst.swap.dex,
-            path: _msgDst.swap.dataInchOrPathV3,
+            path: _msgDst.swap.pathV3,
             deadline: _msgDst.swap.deadline,
             amountOutMinimum: _msgDst.swap.amountOutMinimum
         });

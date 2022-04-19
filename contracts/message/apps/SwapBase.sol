@@ -95,7 +95,7 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControlUpgradea
         address integrator;
         SwapVersion version; // identifies swap type
         address[] path; // path address for v2 and inch
-        bytes dataInchOrPathV3; // path address for v3
+        bytes pathV3; // path address for v3
         uint256 deadline; // for v2 and v3
         uint256 amountOutMinimum;
     }
@@ -108,7 +108,6 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControlUpgradea
     }
 
     enum SwapVersion {
-        inch,
         v2,
         v3,
         bridge

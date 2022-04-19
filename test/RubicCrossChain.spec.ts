@@ -67,7 +67,7 @@ describe('RubicCrossChain', () => {
                 integrator: integrator,
                 version: VERSION,
                 path: [wnative.address, transitToken.address],
-                dataInchOrPathV3: '0x',
+                pathV3: '0x',
                 deadline: DEADLINE,
                 amountOutMinimum: DEFAULT_AMOUNT_OUT_MIN
             },
@@ -112,7 +112,7 @@ describe('RubicCrossChain', () => {
                 integrator: integrator,
                 version: VERSION,
                 path: [wnative.address, transitToken.address],
-                dataInchOrPathV3: '0x',
+                pathV3: '0x',
                 deadline: DEADLINE,
                 amountOutMinimum: DEFAULT_AMOUNT_OUT_MIN
             },
@@ -147,7 +147,7 @@ describe('RubicCrossChain', () => {
             integrator = ZERO_ADDRESS,
             version = VERSION,
             path = [wnative.address, transitToken.address],
-            dataInchOrPathV3 = '0x',
+            pathV3 = '0x',
             deadline = DEADLINE,
             amountOutMinimum = DEFAULT_AMOUNT_OUT_MIN,
             _receiver = wallet.address,
@@ -160,7 +160,7 @@ describe('RubicCrossChain', () => {
                 integrator,
                 version,
                 path,
-                dataInchOrPathV3,
+                pathV3,
                 deadline,
                 amountOutMinimum
             },
@@ -178,7 +178,7 @@ describe('RubicCrossChain', () => {
             integrator = ZERO_ADDRESS,
             version = VERSION,
             path = [wnative.address, transitToken.address],
-            dataInchOrPathV3 = '0x',
+            pathV3 = '0x',
             deadline = DEADLINE,
             amountOutMinimum = DEFAULT_AMOUNT_OUT_MIN,
             _receiver = wallet.address,
@@ -196,7 +196,7 @@ describe('RubicCrossChain', () => {
                 integrator,
                 version,
                 path,
-                dataInchOrPathV3,
+                pathV3,
                 deadline,
                 amountOutMinimum
             },
