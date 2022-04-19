@@ -18,7 +18,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         address _messageBus,
         address[] memory _supportedDEXes,
         address _nativeWrap
-    ) public {
+    ) public initializer {
         messageBus = _messageBus;
         for (uint256 i = 0; i < _supportedDEXes.length; i++) {
             supportedDEXes.add(_supportedDEXes[i]);
@@ -43,19 +43,17 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
      * @param _srcChainId source chain ID
      * @param _message SwapRequestV2 message that defines the swap behavior on this destination chain
      */
-    // TODO reentrancy
     function executeMessageWithTransfer(
         address,
         address _token,
         uint256 _amount,
         uint64 _srcChainId,
         bytes memory _message,
-        address
+        address // executor // TODO caller is our executor only
     ) external payable override onlyMessageBus nonReentrant whenNotPaused returns (ExecutionStatus) {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
         bytes32 id = _computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
 
-        // TODO caller is our executor only
         _amount = _calculatePlatformFee(m.swap.integrator, _token, _amount);
 
         if (m.swap.version == SwapVersion.v3) {

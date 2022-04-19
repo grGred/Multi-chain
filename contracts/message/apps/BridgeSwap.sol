@@ -5,7 +5,7 @@ pragma solidity >=0.8.9;
 import './SwapBase.sol';
 
 contract BridgeSwap is SwapBase {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     event BridgeRequestSent(bytes32 id, uint64 dstChainId, uint256 srcAmount, address srcToken);
 
@@ -18,7 +18,7 @@ contract BridgeSwap is SwapBase {
         uint32 _maxBridgeSlippage,
         bool _nativeOut
     ) external payable onlyEOA {
-        IERC20(_srcBridgeToken).safeTransferFrom(msg.sender, address(this), _amountIn);
+        IERC20Upgradeable(_srcBridgeToken).safeTransferFrom(msg.sender, address(this), _amountIn);
 
         uint256 _fee = _calculateCryptoFee(msg.value, _dstChainId);
 

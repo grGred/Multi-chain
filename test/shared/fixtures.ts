@@ -1,5 +1,5 @@
 import { Fixture } from 'ethereum-waffle';
-import { ethers, network } from 'hardhat';
+import { ethers, network, upgrades } from 'hardhat';
 import { TestERC20 } from '../../typechain-types';
 import { RubicRouterV2 } from '../../typechain-types';
 import { WETH9 } from '../../typechain-types';
@@ -20,7 +20,7 @@ const {
 } = envConfig.parsed || {};
 
 interface SwapContractFixture {
-    RubicRouterV2: RubicRouterV2;
+    swapMain: RubicRouterV2;
     swapToken: TestERC20;
     transitToken: TestERC20;
     wnative: WETH9;
@@ -44,16 +44,24 @@ export const swapContractFixtureInFork: Fixture<SwapContractFixture> = async fun
     let wnative = wnativeFactory.attach(TEST_NATIVE) as WETH9;
     wnative = wnative.connect(wallets[0]);
 
-    const RubicRouterV2Factory = await ethers.getContractFactory('RubicRouterV2');
+    const swapMainFactory = await ethers.getContractFactory('RubicRouterV2');
 
     const supportedDEXes = TEST_ROUTERS.split(',');
     const router = supportedDEXes[0];
 
-    const RubicRouterV2 = (await RubicRouterV2Factory.deploy(
-        TEST_BUS,
-        supportedDEXes,
-        TEST_NATIVE
+    const swapMain = (await upgrades.deployProxy(
+        swapMainFactory,
+        [TEST_BUS, supportedDEXes, TEST_NATIVE],
+        {
+            initializer: 'initialize'
+        }
     )) as RubicRouterV2;
+
+    //     (await RubicRouterV2Factory.deploy(
+    //     TEST_BUS,
+    //     supportedDEXes,
+    //     TEST_NATIVE
+    // )) as RubicRouterV2;
 
     const testMessagesFactory = await ethers.getContractFactory('TestMessages');
     const testMessagesContract = (await testMessagesFactory.deploy()) as TestMessages;
@@ -97,5 +105,5 @@ export const swapContractFixtureInFork: Fixture<SwapContractFixture> = async fun
         '0x152D02C7E14AF6800000' // 100000 eth
     ]);
 
-    return { RubicRouterV2, swapToken, transitToken, wnative, router, testMessagesContract, messageBus };
+    return { swapMain, swapToken, transitToken, wnative, router, testMessagesContract, messageBus };
 };

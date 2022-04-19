@@ -28,7 +28,7 @@ describe('RubicCrossChain', () => {
     let wallet: Wallet, other: Wallet;
     let swapToken: TestERC20;
     let transitToken: TestERC20;
-    let RubicRouterV2: RubicRouterV2;
+    let swapMain: RubicRouterV2;
     let router: string;
     let wnative: WETH9;
     let chainId: number;
@@ -50,9 +50,9 @@ describe('RubicCrossChain', () => {
             integrator = ZERO_ADDRESS
         } = {}
     ): Promise<ContractTransaction> {
-        const cryptoFee = await RubicRouterV2.dstCryptoFee(dstChainID);
+        const cryptoFee = await swapMain.dstCryptoFee(dstChainID);
 
-        return RubicRouterV2.transferWithSwapV2Native(
+        return swapMain.transferWithSwapV2Native(
             receiver === null ? wallet.address : receiver,
             amountIn,
             dstChainID,
@@ -95,9 +95,9 @@ describe('RubicCrossChain', () => {
             integrator = ZERO_ADDRESS
         } = {}
     ): Promise<ContractTransaction> {
-        const cryptoFee = await RubicRouterV2.dstCryptoFee(dstChainID);
+        const cryptoFee = await swapMain.dstCryptoFee(dstChainID);
 
-        return RubicRouterV2.transferWithSwapV2(
+        return swapMain.transferWithSwapV2(
             receiver === null ? wallet.address : receiver,
             amountIn,
             dstChainID,
@@ -212,22 +212,22 @@ describe('RubicCrossChain', () => {
     });
 
     beforeEach('deploy fixture', async () => {
-        ({ RubicRouterV2, swapToken, transitToken, wnative, router, testMessagesContract } =
+        ({ swapMain, swapToken, transitToken, wnative, router, testMessagesContract } =
             await loadFixture(swapContractFixtureInFork));
     });
 
     it('constructor initializes', async () => {
-        expect(await RubicRouterV2.nativeWrap()).to.eq(TEST_NATIVE);
-        expect(await RubicRouterV2.messageBus()).to.eq(TEST_BUS);
+        expect(await swapMain.nativeWrap()).to.eq(TEST_NATIVE);
+        expect(await swapMain.messageBus()).to.eq(TEST_BUS);
 
         const routers = TEST_ROUTERS.split(',');
-        expect(await RubicRouterV2.getSupportedDEXes()).to.deep.eq(routers);
+        expect(await swapMain.getSupportedDEXes()).to.deep.eq(routers);
     });
 
     describe('#WithSwapTests', () => {
         describe('#transferWithSwapV2Native', () => {
             it('Should swap native and transfer through Celer', async () => {
-                const ID = await getID(testMessagesContract, (await RubicRouterV2.nonce()).add('1'));
+                const ID = await getID(testMessagesContract, (await swapMain.nonce()).add('1'));
 
                 const amountOutMin = await getAmountOutMin();
 
@@ -236,41 +236,41 @@ describe('RubicCrossChain', () => {
                         srcPath: [wnative.address, transitToken.address]
                     })
                 )
-                    .to.emit(RubicRouterV2, 'SwapRequestSentV2')
+                    .to.emit(swapMain, 'SwapRequestSentV2')
                     .withArgs(ID, DST_CHAIN_ID, DEFAULT_AMOUNT_IN, wnative.address);
             });
         });
         describe('#transferWithSwapV2', () => {
             it('Should swap transitToken and transfer through Сeler', async () => {
-                await swapToken.approve(RubicRouterV2.address, ethers.constants.MaxUint256);
+                await swapToken.approve(swapMain.address, ethers.constants.MaxUint256);
 
                 const amountOutMin = await getAmountOutMin(DEFAULT_AMOUNT_IN, [
                     swapToken.address,
                     transitToken.address
                 ]);
 
-                const ID = await getID(testMessagesContract, (await RubicRouterV2.nonce()).add('1'));
+                const ID = await getID(testMessagesContract, (await swapMain.nonce()).add('1'));
 
                 await expect(
                     callTransferWithSwapV2(amountOutMin, {
                         srcPath: [swapToken.address, transitToken.address]
                     })
                 )
-                    .to.emit(RubicRouterV2, 'SwapRequestSentV2')
+                    .to.emit(swapMain, 'SwapRequestSentV2')
                     .withArgs(ID, DST_CHAIN_ID, DEFAULT_AMOUNT_IN, swapToken.address);
             });
         });
         describe('#executeMessageWithTransfer', () => {
             beforeEach('setup for target executions', async () => {
                 // transfer 1000 USDC
-                await transitToken.transfer(RubicRouterV2.address, 1000000000);
+                await transitToken.transfer(swapMain.address, 1000000000);
             });
             describe('target swap should emit correct event', async () => {
                 let nonce: BN;
                 let message: string;
 
                 beforeEach('setup before swap', async () => {
-                    nonce = (await RubicRouterV2.nonce()).add('1');
+                    nonce = (await swapMain.nonce()).add('1');
 
                     message = await getMessage(testMessagesContract, nonce, {
                         path: [transitToken.address, swapToken.address],
@@ -290,11 +290,11 @@ describe('RubicCrossChain', () => {
                         '0x152D02C7E14AF6800000' // 100000 eth
                     ]);
 
-                    const _RubicRouterV2 = RubicRouterV2.connect(bus);
+                    const _swapMain = swapMain.connect(bus);
 
-                    let tokenBalanceBefore = await transitToken.balanceOf(RubicRouterV2.address);
+                    let tokenBalanceBefore = await transitToken.balanceOf(swapMain.address);
                     await expect(
-                        _RubicRouterV2.executeMessageWithTransfer(
+                        _swapMain.executeMessageWithTransfer(
                             ethers.constants.AddressZero,
                             transitToken.address,
                             ethers.BigNumber.from('1000000000'),
@@ -302,8 +302,8 @@ describe('RubicCrossChain', () => {
                             message,
                             ethers.constants.AddressZero
                         )
-                    ).to.emit(RubicRouterV2, 'SwapRequestDone');
-                    let tokenBalanceAfter = await transitToken.balanceOf(RubicRouterV2.address);
+                    ).to.emit(swapMain, 'SwapRequestDone');
+                    let tokenBalanceAfter = await transitToken.balanceOf(swapMain.address);
                     // take only platform comission in transit token
                     await expect(Number(tokenBalanceAfter)).to.be.eq(
                         Number(tokenBalanceBefore) * 0.0016
@@ -323,16 +323,16 @@ describe('RubicCrossChain', () => {
                         '0x152D02C7E14AF6800000' // 100000 eth
                     ]);
 
-                    const _RubicRouterV2 = RubicRouterV2.connect(bus);
+                    const _swapMain = swapMain.connect(bus);
 
                     message = await getMessage(testMessagesContract, nonce, {
                         path: [transitToken.address, swapToken.address],
                         amountOutMinimum: ethers.BigNumber.from('2000000000000000000') // 2 eth for 1000$ is minOut, too much
                     });
 
-                    let tokenBalanceBefore = await transitToken.balanceOf(RubicRouterV2.address);
+                    let tokenBalanceBefore = await transitToken.balanceOf(swapMain.address);
                     await expect(
-                        _RubicRouterV2.executeMessageWithTransfer(
+                        _swapMain.executeMessageWithTransfer(
                             ethers.constants.AddressZero,
                             transitToken.address,
                             ethers.BigNumber.from('1000000000'),
@@ -340,21 +340,21 @@ describe('RubicCrossChain', () => {
                             message,
                             ethers.constants.AddressZero
                         )
-                    ).to.emit(RubicRouterV2, 'SwapRequestDone');
+                    ).to.emit(swapMain, 'SwapRequestDone');
 
-                    let tokenBalanceAfter = await transitToken.balanceOf(RubicRouterV2.address);
+                    let tokenBalanceAfter = await transitToken.balanceOf(swapMain.address);
 
                     // take only platform comission in transit token
                     await expect(Number(tokenBalanceAfter)).to.be.eq(
                         Number(tokenBalanceBefore) * 0.0016
                     );
 
-                    const collectedFee1 = await RubicRouterV2.collectedFee(transitToken.address);
+                    const collectedFee1 = await swapMain.collectedFee(transitToken.address);
 
                     await expect(Number(collectedFee1)).to.be.eq(
                         Number(tokenBalanceBefore) * 0.0016
                     );
-                    const integratorCollectedFee1 = await RubicRouterV2.integratorCollectedFee(
+                    const integratorCollectedFee1 = await swapMain.integratorCollectedFee(
                         ethers.constants.AddressZero,
                         transitToken.address
                     );
@@ -363,8 +363,8 @@ describe('RubicCrossChain', () => {
 
                 describe('target swap should take integrator & rubic fee', async () => {
                     beforeEach('set integrator and rubic fee', async () => {
-                        await RubicRouterV2.setIntegrator(ethers.constants.AddressZero, '3000'); // 0.3 %
-                        await RubicRouterV2.setRubicShare(ethers.constants.AddressZero, '500000'); // 50 % of integrator fee, 0.15 in total
+                        await swapMain.setIntegrator(ethers.constants.AddressZero, '3000'); // 0.3 %
+                        await swapMain.setRubicShare(ethers.constants.AddressZero, '500000'); // 50 % of integrator fee, 0.15 in total
 
                         message = await getMessage(testMessagesContract, nonce, {
                             path: [transitToken.address, swapToken.address],
@@ -384,11 +384,11 @@ describe('RubicCrossChain', () => {
                             '0x152D02C7E14AF6800000' // 100000 eth
                         ]);
 
-                        const _RubicRouterV2 = RubicRouterV2.connect(bus);
+                        const _swapMain = swapMain.connect(bus);
 
-                        let tokenBalanceBefore = await transitToken.balanceOf(RubicRouterV2.address);
+                        let tokenBalanceBefore = await transitToken.balanceOf(swapMain.address);
                         await expect(
-                            _RubicRouterV2.executeMessageWithTransfer(
+                            _swapMain.executeMessageWithTransfer(
                                 ethers.constants.AddressZero,
                                 transitToken.address,
                                 ethers.BigNumber.from('1000000000'),
@@ -396,12 +396,14 @@ describe('RubicCrossChain', () => {
                                 message,
                                 ethers.constants.AddressZero
                             )
-                        ).to.emit(RubicRouterV2, 'SwapRequestDone');
+                        ).to.emit(swapMain, 'SwapRequestDone');
 
-                        let tokenBalanceAfter = await transitToken.balanceOf(RubicRouterV2.address);
-                        const collectedFee1 = await RubicRouterV2.collectedFee(transitToken.address);
+                        let tokenBalanceAfter = await transitToken.balanceOf(swapMain.address);
+                        const collectedFee1 = await swapMain.collectedFee(
+                            transitToken.address
+                        );
 
-                        const integratorCollectedFee1 = await RubicRouterV2.integratorCollectedFee(
+                        const integratorCollectedFee1 = await swapMain.integratorCollectedFee(
                             ethers.constants.AddressZero,
                             transitToken.address
                         );
@@ -429,16 +431,16 @@ describe('RubicCrossChain', () => {
                             '0x152D02C7E14AF6800000' // 100000 eth
                         ]);
 
-                        const _RubicRouterV2 = RubicRouterV2.connect(bus);
+                        const _swapMain = swapMain.connect(bus);
 
-                        let tokenBalanceBefore = await transitToken.balanceOf(RubicRouterV2.address);
+                        let tokenBalanceBefore = await transitToken.balanceOf(swapMain.address);
 
                         message = await getMessage(testMessagesContract, nonce, {
                             path: [transitToken.address, swapToken.address],
                             amountOutMinimum: ethers.BigNumber.from('2000000000000000000') // 2 eth for 1000$ is min out
                         });
                         await expect(
-                            _RubicRouterV2.executeMessageWithTransfer(
+                            _swapMain.executeMessageWithTransfer(
                                 ethers.constants.AddressZero,
                                 transitToken.address,
                                 ethers.BigNumber.from('1000000000'),
@@ -446,10 +448,10 @@ describe('RubicCrossChain', () => {
                                 message,
                                 ethers.constants.AddressZero
                             )
-                        ).to.emit(RubicRouterV2, 'SwapRequestDone');
-                        let tokenBalanceAfter = await transitToken.balanceOf(RubicRouterV2.address);
-                        const collectedFee1 = await RubicRouterV2.collectedFee(transitToken.address);
-                        const integratorCollectedFee1 = await RubicRouterV2.integratorCollectedFee(
+                        ).to.emit(swapMain, 'SwapRequestDone');
+                        let tokenBalanceAfter = await transitToken.balanceOf(swapMain.address);
+                        const collectedFee1 = await swapMain.collectedFee(transitToken.address);
+                        const integratorCollectedFee1 = await swapMain.integratorCollectedFee(
                             ethers.constants.AddressZero,
                             transitToken.address
                         );

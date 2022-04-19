@@ -3,6 +3,7 @@ import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-etherscan';
 import 'hardhat-contract-sizer';
+import '@openzeppelin/hardhat-upgrades';
 
 import { SolcUserConfig } from 'hardhat/types'
 
@@ -112,6 +113,6 @@ module.exports = {
   contractSizer: {
     alphaSort: false,
     disambiguatePaths: true,
-    runOnCompile: false,
+    runOnCompile: true,
   },
 }

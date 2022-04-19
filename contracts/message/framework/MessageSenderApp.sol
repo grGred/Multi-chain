@@ -2,15 +2,15 @@
 
 pragma solidity 0.8.9;
 
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 
 import '../libraries/MsgDataTypes.sol';
 import '../libraries/MessageSenderLib.sol';
 import './MessageBusAddress.sol';
 
 abstract contract MessageSenderApp is MessageBusAddress {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // ============== Utility functions called by apps ==============
 

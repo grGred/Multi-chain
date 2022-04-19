@@ -199,7 +199,7 @@ contract TransferSwapInch is SwapBase {
         IERC20Upgradeable Transit = IERC20Upgradeable(_swap.path[_swap.path.length - 1]);
         uint256 transitBalanceBefore = Transit.balanceOf(address(this));
 
-        Address.functionCallWithValue(_swap.dex, _swap.data, _amount);
+        AddressUpgradeable.functionCallWithValue(_swap.dex, _swap.data, _amount);
 
         uint256 balanceDif = Transit.balanceOf(address(this)) - transitBalanceBefore;
 
@@ -220,7 +220,7 @@ contract TransferSwapInch is SwapBase {
         IERC20Upgradeable Transit = IERC20Upgradeable(_swap.path[_swap.path.length - 1]);
         uint256 transitBalanceBefore = Transit.balanceOf(address(this));
 
-        Address.functionCall(_swap.dex, _swap.data);
+        AddressUpgradeable.functionCall(_swap.dex, _swap.data);
 
         uint256 balanceDif = Transit.balanceOf(address(this)) - transitBalanceBefore;
 
