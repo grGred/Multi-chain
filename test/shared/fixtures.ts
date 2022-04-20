@@ -44,24 +44,18 @@ export const swapContractFixtureInFork: Fixture<SwapContractFixture> = async fun
     let wnative = wnativeFactory.attach(TEST_NATIVE) as WETH9;
     wnative = wnative.connect(wallets[0]);
 
-    const swapMainFactory = await ethers.getContractFactory('RubicRouterV2');
+    const RubicRouterV2Factory = await ethers.getContractFactory('RubicRouterV2');
 
     const supportedDEXes = TEST_ROUTERS.split(',');
     const router = supportedDEXes[0];
 
     const swapMain = (await upgrades.deployProxy(
-        swapMainFactory,
+        RubicRouterV2Factory,
         [TEST_BUS, supportedDEXes, TEST_NATIVE],
         {
             initializer: 'initialize'
         }
     )) as RubicRouterV2;
-
-    //     (await RubicRouterV2Factory.deploy(
-    //     TEST_BUS,
-    //     supportedDEXes,
-    //     TEST_NATIVE
-    // )) as RubicRouterV2;
 
     const testMessagesFactory = await ethers.getContractFactory('TestMessages');
     const testMessagesContract = (await testMessagesFactory.deploy()) as TestMessages;

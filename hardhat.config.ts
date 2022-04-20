@@ -58,6 +58,7 @@ module.exports = {
     },
     rinkeby: {
       url: `https://rinkeby.infura.io/v3/${INFURA_ID_PROJECT}`,
+      accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`],
     },
     goerli: {
       url: `https://goerli.infura.io/v3/${INFURA_ID_PROJECT}`,
@@ -105,7 +106,7 @@ module.exports = {
     // Your API key for Etherscan
     // Obtain one at https://etherscan.io/
     // TODO add api keyes
-    apiKey: `${FANTOMSCAN_API_KEY}`,
+    apiKey: `${BSCSCAN_API_KEY}`,
   },
   solidity: {
     compilers: [DEFAULT_COMPILER_SETTINGS],
@@ -113,6 +114,6 @@ module.exports = {
   contractSizer: {
     alphaSort: false,
     disambiguatePaths: true,
-    runOnCompile: true,
+    runOnCompile: false,
   },
 }

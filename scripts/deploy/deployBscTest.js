@@ -9,17 +9,17 @@ async function main() {
    *    address _nativeWrap
    */
 
-  // AVALANCHE 43114
-  // MessageBus 0x5a926eeeAFc4D217ADd17e9641e8cE23Cd01Ad57
-  // WAVAX native token address in AVALANCHE: 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7
-  // USDC token address in AVALANCHE: 0xA7D7079b0FEaD91F3e65f86E8915Cb59c1a4C664
+  // BNB TEST 97
+  // MessageBus 0xAd204986D6cB67A5Bc76a3CB8974823F43Cb9AAA
+  // WBNB native token address in BSC: 0x094616F0BdFB0b526bD735Bf66Eca0Ad254ca81F
+  // USDC token address in BSC: 0x9744ae566c64B6B6f7F9A4dD50f7496Df6Fef990
   // SUSHI: 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506
 
-    const CrossChainSwapDeploy = await hre.upgrades.deployProxy(
+  const CrossChainSwapDeploy = await hre.upgrades.deployProxy(
       CrossChainSwap,
-      ['0x5a926eeeAFc4D217ADd17e9641e8cE23Cd01Ad57',
+      ['0xAd204986D6cB67A5Bc76a3CB8974823F43Cb9AAA',
       ['0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506'],
-      '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7'],
+      '0x094616F0BdFB0b526bD735Bf66Eca0Ad254ca81F'],
       {
           initializer: 'initialize'
       }
