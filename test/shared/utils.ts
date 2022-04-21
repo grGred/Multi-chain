@@ -17,28 +17,28 @@ export const getRouterV2 = async function (
     return router;
 };
 
-export const createPoolV2 = async function (
-    wallet: Wallet,
-    routerAddress: string,
-    token: string,
-    tokenAmount = ethers.utils.parseEther('100')
-): Promise<IUniswapV2Router02> {
-    const router = await getRouterV2(wallet, routerAddress);
+// not used
+// export const createPoolV2 = async function (
+//     wallet: Wallet,
+//     routerAddress: string,
+//     token: string,
+//     tokenAmount = ethers.utils.parseEther('100')
+// ): Promise<IUniswapV2Router02> {
+//     const router = await getRouterV2(wallet, routerAddress);
+//
+//     await router.addLiquidityETH(
+//         token,
+//         tokenAmount,
+//         tokenAmount,
+//         ethers.utils.parseEther('100'),
+//         await router.signer.getAddress(),
+//         DEADLINE,
+//         { value: ethers.utils.parseEther('100') }
+//     );
+//
+//     return router;
+// };
 
-    await router.addLiquidityETH(
-        token,
-        tokenAmount,
-        tokenAmount,
-        ethers.utils.parseEther('100'),
-        await router.signer.getAddress(),
-        DEADLINE,
-        { value: ethers.utils.parseEther('100') }
-    );
-
-    return router;
-};
-
-/////////////////////// V3
 export const getRouterV3 = async function (
     wallet: Wallet,
     routerAddressV3: string
@@ -46,27 +46,6 @@ export const getRouterV3 = async function (
     const routerFactoryV3 = ethers.ContractFactory.fromSolidity(UniV3JSON);
     let routerV3 = routerFactoryV3.attach(routerAddressV3) as IUniswapRouterV3;
     routerV3 = routerV3.connect(wallet);
-
-    return routerV3;
-};
-
-export const createPoolV3 = async function (
-    wallet: Wallet,
-    routerAddressV3: string,
-    token: string,
-    tokenAmount = ethers.utils.parseEther('100')
-): Promise<IUniswapRouterV3> {
-    const routerV3 = await getRouterV3(wallet, routerAddressV3);
-
-    await routerV3.addLiquidityETH(
-        token,
-        tokenAmount,
-        tokenAmount,
-        ethers.utils.parseEther('100'),
-        await routerV3.signer.getAddress(),
-        DEADLINE,
-        { value: ethers.utils.parseEther('100') }
-    );
 
     return routerV3;
 };

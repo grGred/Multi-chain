@@ -24,7 +24,7 @@ const {
     BUS_POLYGON: TEST_BUS
 } = envConfig.parsed || {};
 
-describe('RubicCrossChain', () => {
+describe('RubicCrossChainV2', () => {
     let wallet: Wallet, other: Wallet;
     let swapToken: TestERC20;
     let transitToken: TestERC20;
