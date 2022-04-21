@@ -47,7 +47,7 @@ export const swapContractFixtureInFork: Fixture<SwapContractFixture> = async fun
     const RubicRouterV2Factory = await ethers.getContractFactory('RubicRouterV2');
 
     const supportedDEXes = TEST_ROUTERS.split(',');
-    const router = supportedDEXes[0];
+    const router = supportedDEXes[1];
 
     const swapMain = (await upgrades.deployProxy(
         RubicRouterV2Factory,

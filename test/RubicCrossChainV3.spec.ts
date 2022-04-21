@@ -11,7 +11,7 @@ import {
     ZERO_ADDRESS,
     DEFAULT_AMOUNT_OUT_MIN
 } from './shared/consts';
-import { BigNumber as BN, BigNumberish, ContractTransaction } from 'ethers';
+import { BigNumber as BN, BigNumberish, ContractTransaction, BytesLike } from 'ethers';
 import { getRouterV3 } from './shared/utils';
 const hre = require('hardhat');
 
@@ -37,14 +37,14 @@ describe('RubicCrossChainV3', () => {
 
     let loadFixture: ReturnType<typeof createFixtureLoader>;
 
-    async function toBytes32(address): Promise<string> {
-        return '0x000000000000000000000000' + address.slice(2, address.length);
-    }
-    // function encodePath(tokens){
-    //     const zeros = '0'.repeat(24)
-    //     return (tokens[0] + '000bb8' + tokens[1].slice(2))
+    // async function toBytes32(address): Promise<string> {
+    //     return '0x000000000000000000000000' + address.slice(2, address.length);
     // }
-    //
+
+    async function encodePath(tokens): Promise<string> {
+        return tokens[0] + '000bb8' + tokens[1].slice(2);
+    }
+
     // function encodePathReverse(tokens){
     //     const zeros = '0'.repeat(24)
     //     return (tokens[1] + '000bb8' + tokens[0].slice(2))
@@ -52,12 +52,12 @@ describe('RubicCrossChainV3', () => {
 
     async function callTransferWithSwapV3Native(
         amountOutMinimum: BigNumberish,
+        srcPathBytes: BytesLike,
         {
             receiver = null,
             amountIn = DEFAULT_AMOUNT_IN,
             dstChainID = DST_CHAIN_ID,
             srcDEX = router,
-            srcPathBytes = [toBytes32(wnative.address), toBytes32(transitToken.address)],
             nativeOut = false,
             nativeIn = null,
             integrator = ZERO_ADDRESS
@@ -239,17 +239,20 @@ describe('RubicCrossChainV3', () => {
 
     describe('#WithSwapTests', () => {
         describe('#transferWithSwapV3Native', () => {
-            it('Should swap native and transfer through Celer', async () => {
+            it.only('Should swap native and transfer through Celer', async () => {
                 const ID = await getID(testMessagesContract, (await swapMain.nonce()).add('1'));
 
                 // const amountOutMin = await getAmountOutMin();
 
+                const path = await encodePath([wnative.address, transitToken.address]);
+
                 await expect(
-                    callTransferWithSwapV3Native(0 /*amountOutMin*/, {
-                        srcPath: [toBytes32(wnative.address), toBytes32(transitToken.address)]
-                    })
+                    callTransferWithSwapV3Native(
+                        0,
+                        path
+                    )
                 )
-                    .to.emit(swapMain, 'SwapRequestSentV2')
+                    .to.emit(swapMain, 'SwapRequestSentV3')
                     .withArgs(ID, DST_CHAIN_ID, DEFAULT_AMOUNT_IN, wnative.address);
             });
         });
