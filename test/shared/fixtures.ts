@@ -25,6 +25,7 @@ interface SwapContractFixture {
     transitToken: TestERC20;
     wnative: WETH9;
     router: string;
+    routerV3: string;
     testMessagesContract: TestMessages;
     messageBus: MessageBusSender;
 }
@@ -47,7 +48,8 @@ export const swapContractFixtureInFork: Fixture<SwapContractFixture> = async fun
     const RubicRouterV2Factory = await ethers.getContractFactory('RubicRouterV2');
 
     const supportedDEXes = TEST_ROUTERS.split(',');
-    const router = supportedDEXes[1];
+    const router = supportedDEXes[0];
+    const routerV3 = supportedDEXes[1];
 
     const swapMain = (await upgrades.deployProxy(
         RubicRouterV2Factory,
@@ -99,5 +101,5 @@ export const swapContractFixtureInFork: Fixture<SwapContractFixture> = async fun
         '0x152D02C7E14AF6800000' // 100000 eth
     ]);
 
-    return { swapMain, swapToken, transitToken, wnative, router, testMessagesContract, messageBus };
+    return { swapMain, swapToken, transitToken, wnative, router, routerV3, testMessagesContract, messageBus };
 };

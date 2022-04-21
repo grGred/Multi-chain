@@ -30,6 +30,7 @@ describe('RubicCrossChainV3', () => {
     let transitToken: TestERC20;
     let swapMain: RubicRouterV2;
     let router: string;
+    let routerV3: string;
     let wnative: WETH9;
     let chainId: number;
 
@@ -57,7 +58,7 @@ describe('RubicCrossChainV3', () => {
             receiver = null,
             amountIn = DEFAULT_AMOUNT_IN,
             dstChainID = DST_CHAIN_ID,
-            srcDEX = router,
+            srcDEX = routerV3,
             nativeOut = false,
             nativeIn = null,
             integrator = ZERO_ADDRESS
@@ -76,7 +77,7 @@ describe('RubicCrossChainV3', () => {
                 amountOutMinimum
             },
             {
-                dex: router,
+                dex: routerV3,
                 integrator: integrator,
                 version: VERSION,
                 path: [wnative.address, transitToken.address],
@@ -156,7 +157,7 @@ describe('RubicCrossChainV3', () => {
         messagesContract: TestMessages,
         _nonce: BigNumberish,
         {
-            dex = router,
+            dex = routerV3,
             integrator = ZERO_ADDRESS,
             version = VERSION,
             path = [wnative.address, transitToken.address],
@@ -187,7 +188,7 @@ describe('RubicCrossChainV3', () => {
         messagesContract: TestMessages,
         _nonce: BigNumberish,
         {
-            dex = router,
+            dex = routerV3,
             integrator = ZERO_ADDRESS,
             version = VERSION,
             path = [wnative.address, transitToken.address],
@@ -225,7 +226,7 @@ describe('RubicCrossChainV3', () => {
     });
 
     beforeEach('deploy fixture', async () => {
-        ({ swapMain, swapToken, transitToken, wnative, router, testMessagesContract } =
+        ({ swapMain, swapToken, transitToken, wnative, router, routerV3, testMessagesContract } =
             await loadFixture(swapContractFixtureInFork));
     });
 
@@ -246,12 +247,7 @@ describe('RubicCrossChainV3', () => {
 
                 const path = await encodePath([wnative.address, transitToken.address]);
 
-                await expect(
-                    callTransferWithSwapV3Native(
-                        0,
-                        path
-                    )
-                )
+                await expect(callTransferWithSwapV3Native(0, path))
                     .to.emit(swapMain, 'SwapRequestSentV3')
                     .withArgs(ID, DST_CHAIN_ID, DEFAULT_AMOUNT_IN, wnative.address);
             });
