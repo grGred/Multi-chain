@@ -6,19 +6,19 @@ import './TransferSwapV2.sol';
 import './TransferSwapV3.sol';
 import './TransferSwapInch.sol';
 import './BridgeSwap.sol';
-import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 
-contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwap, ReentrancyGuardUpgradeable  {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
+contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwap, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     event SwapRequestDone(bytes32 id, uint256 dstAmount, SwapStatus status);
 
-    function initialize(
+    constructor(
         address _messageBus,
         address[] memory _supportedDEXes,
         address _nativeWrap
-    ) public initializer {
+    ) public {
         messageBus = _messageBus;
         for (uint256 i = 0; i < _supportedDEXes.length; i++) {
             supportedDEXes.add(_supportedDEXes[i]);
@@ -28,10 +28,6 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         feeRubic = 1600; // 0.16%
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER, msg.sender);
-
-        __ReentrancyGuard_init();
-        __Pausable_init();
-        __AccessControl_init();
     }
 
     /**
@@ -101,11 +97,13 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         address // executor
     ) external payable override onlyMessageBus nonReentrant returns (ExecutionStatus) {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
-        if (m.swap.version == SwapVersion.v3) {
-            _sendToken(_token, _amount, m.receiver);
-        } else {
-            _sendToken(m.swap.path[m.swap.path.length - 1], _amount, m.receiver);
-        }
+
+        bytes32 id = _computeSwapRequestId(m.receiver, uint64(block.chainid), m.dstChainId, _message);
+
+        _sendToken(_token, _amount, m.receiver);
+
+        emit SwapRequestDone(id, 0, SwapStatus.Succeeded);
+
         return ExecutionStatus.Success;
     }
 
@@ -212,7 +210,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
             (bool sent, ) = _receiver.call{value: _amount, gas: 50000}('');
             require(sent, 'failed to send native');
         } else {
-            IERC20Upgradeable(_token).safeTransfer(_receiver, _amount);
+            IERC20(_token).safeTransfer(_receiver, _amount);
         }
     }
 
@@ -254,7 +252,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         return supportedDEXes.values();
     }
 
-    function sweepTokens(IERC20Upgradeable token) external onlyManager {
+    function sweepTokens(IERC20 token) external onlyManager {
         token.safeTransfer(msg.sender, token.balanceOf(address(this)));
     }
 
@@ -267,7 +265,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
             (bool sent, ) = payable(msg.sender).call{value: _amount, gas: 50000}('');
             require(sent, 'failed to send native');
         } else {
-            IERC20Upgradeable(_token).safeTransfer(msg.sender, _amount);
+            IERC20(_token).safeTransfer(msg.sender, _amount);
         }
         integratorCollectedFee[msg.sender][_token] -= _amount;
     }
@@ -279,7 +277,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
             (bool sent, ) = payable(msg.sender).call{value: _amount, gas: 50000}('');
             require(sent, 'failed to send native');
         } else {
-            IERC20Upgradeable(_token).safeTransfer(msg.sender, _amount);
+            IERC20(_token).safeTransfer(msg.sender, _amount);
         }
         collectedFee[_token] -= _amount;
     }

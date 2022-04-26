@@ -5,7 +5,7 @@ pragma solidity >=0.8.9;
 import './SwapBase.sol';
 
 contract BridgeSwap is SwapBase {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20 for IERC20;
 
     event BridgeRequestSent(bytes32 id, uint64 dstChainId, uint256 srcAmount, address srcToken);
 
@@ -18,7 +18,7 @@ contract BridgeSwap is SwapBase {
         uint32 _maxBridgeSlippage,
         bool _nativeOut
     ) external payable onlyEOA {
-        IERC20Upgradeable(_srcBridgeToken).safeTransferFrom(msg.sender, address(this), _amountIn);
+        IERC20(_srcBridgeToken).safeTransferFrom(msg.sender, address(this), _amountIn);
 
         uint256 _fee = _calculateCryptoFee(msg.value, _dstChainId);
 
@@ -77,9 +77,9 @@ contract BridgeSwap is SwapBase {
         require(_amountIn >= minSwapAmount[_srcBridgeToken], 'amount must be greater than min bridge amount');
         require(_dstSwap.path.length > 0, 'empty dst swap path');
         bytes memory message = abi.encode(
-            SwapRequestDest({swap: _dstSwap, receiver: msg.sender, nonce: nonce, nativeOut: _nativeOut})
+            SwapRequestDest({swap: _dstSwap, receiver: msg.sender, nonce: nonce, nativeOut: _nativeOut, dstChainId: _dstChainId})
         );
-        bytes32 id = SwapBase._computeSwapRequestId(msg.sender, _chainId, _dstChainId, message);
+        bytes32 id = _computeSwapRequestId(msg.sender, _chainId, _dstChainId, message);
 
         sendMessageWithTransfer(
             _receiver,

@@ -2,8 +2,8 @@
 
 pragma solidity >=0.8.0;
 
-import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '../../interfaces/IBridge.sol';
 import '../../interfaces/IOriginalTokenVault.sol';
 import '../../interfaces/IOriginalTokenVaultV2.sol';
@@ -13,7 +13,7 @@ import '../../interfaces/IMessageBus.sol';
 import './MsgDataTypes.sol';
 
 library MessageSenderLib {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20 for IERC20;
 
     // ============== Internal library functions called by apps ==============
 
@@ -147,7 +147,7 @@ library MessageSenderLib {
         uint256 _fee
     ) internal returns (bytes32) {
         address bridge = IMessageBus(_messageBus).liquidityBridge();
-        IERC20Upgradeable(_token).safeIncreaseAllowance(bridge, _amount);
+        IERC20(_token).safeIncreaseAllowance(bridge, _amount);
         IBridge(bridge).send(_receiver, _token, _amount, _dstChainId, _nonce, _maxSlippage);
         bytes32 transferId = keccak256(
             abi.encodePacked(address(this), _receiver, _token, _amount, _dstChainId, _nonce, uint64(block.chainid))

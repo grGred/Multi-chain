@@ -6,8 +6,8 @@ import './SwapBase.sol';
 import '../../interfaces/ISwapRouter.sol';
 
 contract TransferSwapV3 is SwapBase {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
+    using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     event DirectSwapV3(
         bytes32 id,
@@ -56,7 +56,7 @@ contract TransferSwapV3 is SwapBase {
         uint32 _maxBridgeSlippage,
         bool _nativeOut
     ) external payable onlyEOA whenNotPaused {
-        IERC20Upgradeable(address(_getFirstBytes20(_srcSwap.path))).safeTransferFrom(msg.sender, address(this), _amountIn);
+        IERC20(address(_getFirstBytes20(_srcSwap.path))).safeTransferFrom(msg.sender, address(this), _amountIn);
 
         uint256 _fee = _calculateCryptoFee(msg.value, _dstChainId);
 
@@ -142,7 +142,7 @@ contract TransferSwapV3 is SwapBase {
         uint256 srcAmtOut
     ) private {
         // no need to bridge, directly send the tokens to user
-        IERC20Upgradeable(srcTokenOut).safeTransfer(_receiver, srcAmtOut);
+        IERC20(srcTokenOut).safeTransfer(_receiver, srcAmtOut);
         // use uint64 for chainid to be consistent with other components in the system
         bytes32 id = keccak256(abi.encode(msg.sender, _chainId, _receiver, _nonce, _srcSwap));
         emit DirectSwapV3(id, _chainId, _amountIn, address(_getFirstBytes20(_srcSwap.path)), srcAmtOut, srcTokenOut);
@@ -164,7 +164,7 @@ contract TransferSwapV3 is SwapBase {
     ) private {
         require(_dstSwap.path.length > 0, 'empty dst swap path');
         bytes memory message = abi.encode(
-            SwapRequestDest({swap: _dstSwap, receiver: msg.sender, nonce: _nonce, nativeOut: _nativeOut})
+            SwapRequestDest({swap: _dstSwap, receiver: msg.sender, nonce: nonce, nativeOut: _nativeOut, dstChainId: _dstChainId})
         );
         bytes32 id = _computeSwapRequestId(msg.sender, _chainId, _dstChainId, message);
 
@@ -189,7 +189,7 @@ contract TransferSwapV3 is SwapBase {
             return (false, 0);
         }
 
-        smartApprove(IERC20Upgradeable(address(_getFirstBytes20(_swap.path))), _amount, _swap.dex);
+        smartApprove(IERC20(address(_getFirstBytes20(_swap.path))), _amount, _swap.dex);
 
         IUniswapRouterV3.ExactInputParams memory paramsV3 = IUniswapRouterV3.ExactInputParams(
             _swap.path,

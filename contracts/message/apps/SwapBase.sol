@@ -2,21 +2,21 @@
 
 pragma solidity >=0.8.9;
 
-import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
+import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
+import '@openzeppelin/contracts/access/AccessControl.sol';
+import '@openzeppelin/contracts/security/Pausable.sol';
 import '../framework/MessageSenderApp.sol';
 import '../framework/MessageReceiverApp.sol';
 import '../../interfaces/IWETH.sol';
 import '../libraries/FullMath.sol';
 
-contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControlUpgradeable, PausableUpgradeable {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
+contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControl, Pausable {
+    using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
-    EnumerableSetUpgradeable.AddressSet internal supportedDEXes;
+    EnumerableSet.AddressSet internal supportedDEXes;
 
     // Collected fee amount for Rubic and integrators
     // token -> amount of collected fees
@@ -105,6 +105,7 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControlUpgradea
         address receiver; // EOA
         uint64 nonce;
         bool nativeOut;
+        uint64 dstChainId;
     }
 
     enum SwapVersion {
@@ -180,7 +181,7 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControlUpgradea
     }
 
     function smartApprove(
-        IERC20Upgradeable tokenIn,
+        IERC20 tokenIn,
         uint256 amount,
         address to
     ) internal {

@@ -11,10 +11,11 @@ contract TestMessages is SwapBase {
         SwapInfoDest memory _dstSwap,
         address _receiver,
         uint64 _nonce,
+        uint64 _dstChainId,
         bool _nativeOut
-    ) external pure returns (bytes memory) {
+    ) external returns (bytes memory) {
         bytes memory message = abi.encode(
-            SwapRequestDest({swap: _dstSwap, receiver: _receiver, nonce: _nonce, nativeOut: _nativeOut})
+            SwapRequestDest({swap: _dstSwap, receiver: msg.sender, nonce: _nonce, nativeOut: _nativeOut, dstChainId: _dstChainId})
         );
 
         return message;
@@ -27,9 +28,9 @@ contract TestMessages is SwapBase {
         SwapInfoDest memory _dstSwap,
         uint64 _nonce,
         bool _nativeOut
-    ) external pure returns (bytes32) {
+    ) external returns (bytes32) {
         bytes memory message = abi.encode(
-            SwapRequestDest({swap: _dstSwap, receiver: _receiver, nonce: _nonce, nativeOut: _nativeOut})
+            SwapRequestDest({swap: _dstSwap, receiver: msg.sender, nonce: _nonce, nativeOut: _nativeOut, dstChainId: _dstChainId})
         );
         bytes32 id = SwapBase._computeSwapRequestId(_receiver, _chainId, _dstChainId, message);
 
