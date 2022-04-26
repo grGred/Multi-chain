@@ -200,5 +200,5 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControlUpgradea
     }
 
     // This is needed to receive ETH when calling `IWETH.withdraw`
-    receive() external payable {}
+    fallback() external payable {}
 }

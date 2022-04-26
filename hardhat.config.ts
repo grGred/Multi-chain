@@ -31,6 +31,7 @@ const DEFAULT_COMPILER_SETTINGS: SolcUserConfig = {
     metadata: {
       bytecodeHash: 'none',
     },
+    evmVersion: "istanbul",
   },
 }
 
@@ -105,7 +106,7 @@ module.exports = {
   etherscan: {
     // Your API key for Etherscan
     // Obtain one at https://etherscan.io/
-    apiKey: `${AVALANCHE_API_KEY}`,
+    apiKey: `${BSCSCAN_API_KEY}`,
   },
   solidity: {
     compilers: [DEFAULT_COMPILER_SETTINGS],

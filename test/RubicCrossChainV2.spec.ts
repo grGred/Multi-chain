@@ -226,7 +226,7 @@ describe('RubicCrossChainV2', () => {
 
     describe('#WithSwapTests', () => {
         describe('#transferWithSwapV2Native', () => {
-            it('Should swap native and transfer through Celer', async () => {
+            it('Should swap native to token and transfer through Celer', async () => {
                 const ID = await getID(testMessagesContract, (await swapMain.nonce()).add('1'));
 
                 const amountOutMin = await getAmountOutMin();
@@ -371,7 +371,8 @@ describe('RubicCrossChainV2', () => {
                             amountOutMinimum: ethers.BigNumber.from('200000000000000000') // 0.2 eth for 1000$ is minOut, too much
                         });
                     });
-                    it('should successfully swap V2 with rubic & integrator fee', async () => {
+
+                    it('should successfully swapV2 token to token with rubic & integrator fee', async () => {
                         await hre.network.provider.request({
                             method: 'hardhat_impersonateAccount',
                             params: [TEST_BUS]
@@ -399,9 +400,7 @@ describe('RubicCrossChainV2', () => {
                         ).to.emit(swapMain, 'SwapRequestDone');
 
                         let tokenBalanceAfter = await transitToken.balanceOf(swapMain.address);
-                        const collectedFee1 = await swapMain.collectedFee(
-                            transitToken.address
-                        );
+                        const collectedFee1 = await swapMain.collectedFee(transitToken.address);
 
                         const integratorCollectedFee1 = await swapMain.integratorCollectedFee(
                             ethers.constants.AddressZero,
@@ -418,6 +417,59 @@ describe('RubicCrossChainV2', () => {
                             Number(tokenBalanceBefore) * 0.003
                         );
                     });
+
+                    it.only('should successfully swapV2 token to native with rubic & integrator fee', async () => {
+                        await hre.network.provider.request({
+                            method: 'hardhat_impersonateAccount',
+                            params: [TEST_BUS]
+                        });
+
+                        const bus = await ethers.getSigner(TEST_BUS);
+
+                        await network.provider.send('hardhat_setBalance', [
+                            bus.address,
+                            '0x152D02C7E14AF6800000' // 100000 eth
+                        ]);
+
+                        const _swapMain = swapMain.connect(bus);
+
+                        let tokenBalanceBefore = await transitToken.balanceOf(swapMain.address);
+
+                        message = await getMessage(testMessagesContract, nonce, {
+                            path: [transitToken.address, wnative.address],
+                            amountOutMinimum: ethers.BigNumber.from('20000000000000000') // 0.02 eth for 1000$ is minOut
+                        });
+
+                        await expect(
+                            _swapMain.executeMessageWithTransfer(
+                                ethers.constants.AddressZero,
+                                transitToken.address,
+                                ethers.BigNumber.from('1000000000'),
+                                DST_CHAIN_ID,
+                                message,
+                                ethers.constants.AddressZero
+                            )
+                        ).to.emit(swapMain, 'SwapRequestDone');
+
+                        let tokenBalanceAfter = await transitToken.balanceOf(swapMain.address);
+                        const collectedFee1 = await swapMain.collectedFee(transitToken.address);
+
+                        const integratorCollectedFee1 = await swapMain.integratorCollectedFee(
+                            ethers.constants.AddressZero,
+                            transitToken.address
+                        );
+
+                        await expect(Number(collectedFee1)).to.be.eq(
+                            Number(integratorCollectedFee1)
+                        );
+
+                        await expect(Number(collectedFee1)).to.be.eq(1500000);
+                        // take platform comission in transit token
+                        await expect(Number(tokenBalanceAfter)).to.be.eq(
+                            Number(tokenBalanceBefore) * 0.003
+                        );
+                    });
+
                     it('should fail swap V2 with rubic & integrator fee', async () => {
                         await hre.network.provider.request({
                             method: 'hardhat_impersonateAccount',

@@ -85,7 +85,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
 
         bytes32 id = _computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
 
-        _sendToken(_token, _amount, m.receiver, m.nativeOut);
+        _sendToken(_token, _amount, m.receiver);
 
         emit SwapRequestDone(id, 0, SwapStatus.Failed);
         // always return Fail to mark this transfer as failed since if this function is called then there nothing more
@@ -102,9 +102,9 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
     ) external payable override onlyMessageBus nonReentrant returns (ExecutionStatus) {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
         if (m.swap.version == SwapVersion.v3) {
-            _sendToken(_token, _amount, m.receiver, m.nativeOut);
+            _sendToken(_token, _amount, m.receiver);
         } else {
-            _sendToken(m.swap.path[m.swap.path.length - 1], _amount, m.receiver, m.nativeOut);
+            _sendToken(m.swap.path[m.swap.path.length - 1], _amount, m.receiver);
         }
         return ExecutionStatus.Success;
     }
@@ -121,7 +121,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
             'bridged token must be the same as the first token in destination swap path'
         );
         require(_msgDst.swap.path.length == 1, 'dst bridge expected');
-        _sendToken(_msgDst.swap.path[0], _amount, _msgDst.receiver, _msgDst.nativeOut);
+        _sendToken(_msgDst.swap.path[0], _amount, _msgDst.receiver);
         SwapStatus status = SwapStatus.Succeeded;
         emit SwapRequestDone(_id, _amount, status);
     }
@@ -132,12 +132,10 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         bytes32 _id,
         SwapRequestDest memory _msgDst
     ) private {
-        // TODO add as modifier
         require(
             _token == _msgDst.swap.path[0],
             'bridged token must be the same as the first token in destination swap path'
         );
-        // TODO add as modifier
         require(_msgDst.swap.path.length > 1, 'dst swap expected');
 
         uint256 dstAmount;
@@ -153,11 +151,11 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         bool success;
         (success, dstAmount) = _trySwapV2(_dstSwap, _amount);
         if (success) {
-            _sendToken(_dstSwap.path[_dstSwap.path.length - 1], dstAmount, _msgDst.receiver, _msgDst.nativeOut);
+            _sendToken(_dstSwap.path[_dstSwap.path.length - 1], dstAmount, _msgDst.receiver);
             status = SwapStatus.Succeeded;
         } else {
             // handle swap failure, send the received token directly to receiver
-            _sendToken(_token, _amount, _msgDst.receiver, false);
+            _sendToken(_token, _amount, _msgDst.receiver);
             dstAmount = _amount;
             status = SwapStatus.Fallback;
         }
@@ -192,11 +190,11 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         bool success;
         (success, dstAmount) = _trySwapV3(_dstSwap, _amount);
         if (success) {
-            _sendToken(address(_getLastBytes20(_dstSwap.path)), dstAmount, _msgDst.receiver, _msgDst.nativeOut);
+            _sendToken(address(_getLastBytes20(_dstSwap.path)), dstAmount, _msgDst.receiver);
             status = SwapStatus.Succeeded;
         } else {
             // handle swap failure, send the received token directly to receiver
-            _sendToken(_token, _amount, _msgDst.receiver, false);
+            _sendToken(_token, _amount, _msgDst.receiver);
             dstAmount = _amount;
             status = SwapStatus.Fallback;
         }
@@ -207,11 +205,9 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
     function _sendToken(
         address _token,
         uint256 _amount,
-        address _receiver,
-        bool _nativeOut
+        address _receiver
     ) private {
-        if (_nativeOut) {
-            require(_token == nativeWrap, 'token mismatch');
+        if (_token == nativeWrap) {
             IWETH(nativeWrap).withdraw(_amount);
             (bool sent, ) = _receiver.call{value: _amount, gas: 50000}('');
             require(sent, 'failed to send native');
