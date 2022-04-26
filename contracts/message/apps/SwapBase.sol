@@ -37,6 +37,7 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControl, Pausab
 
     // erc20 wrap of gas token of this chain, eg. WETH
     address public nativeWrap;
+    address public executorAddr;
 
     // minimal amount of bridged token
     mapping(address => uint256) public minSwapAmount;
@@ -45,10 +46,18 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControl, Pausab
 
     // Role of the manager
     bytes32 public constant MANAGER = keccak256('MANAGER');
+    // Role of the executor
+    bytes32 public constant EXECUTOR = keccak256('EXECUTOR');
 
     /// @dev This modifier prevents using manager functions
     modifier onlyManager() {
         require(hasRole(MANAGER, msg.sender), 'Caller is not a manager');
+        _;
+    }
+
+    /// @dev This modifier prevents using executor functions
+    modifier onlyExecutor(address _executor) {
+        require(hasRole(EXECUTOR, _executor), 'Caller is not an executor');
         _;
     }
 

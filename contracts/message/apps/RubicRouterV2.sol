@@ -25,9 +25,11 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         }
         nativeWrap = _nativeWrap;
         dstCryptoFee[43114] = 10000000;
-        feeRubic = 1600; // 0.16%
+        dstCryptoFee[250] = 10000000;
+        feeRubic = 3000; // 0.3%
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER, msg.sender);
+        _setupRole(EXECUTOR, 0x645144372C15d5AA59E343353610Cc7C5A926289);
     }
 
     /**
@@ -45,8 +47,8 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         uint256 _amount,
         uint64 _srcChainId,
         bytes memory _message,
-        address // executor // TODO caller is our executor only
-    ) external payable override onlyMessageBus nonReentrant whenNotPaused returns (ExecutionStatus) {
+        address _executor
+    ) external payable override onlyMessageBus nonReentrant whenNotPaused onlyExecutor(_executor) returns (ExecutionStatus) {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
         bytes32 id = _computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
 
@@ -75,8 +77,8 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         uint256 _amount,
         uint64 _srcChainId,
         bytes memory _message,
-        address // executor
-    ) external payable override onlyMessageBus nonReentrant returns (ExecutionStatus) {
+        address _executor
+    ) external payable override onlyMessageBus nonReentrant whenNotPaused onlyExecutor(_executor) returns (ExecutionStatus) {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
 
         bytes32 id = _computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
@@ -94,8 +96,8 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         address _token,
         uint256 _amount,
         bytes calldata _message,
-        address // executor
-    ) external payable override onlyMessageBus nonReentrant returns (ExecutionStatus) {
+        address _executor
+    ) external payable override onlyMessageBus nonReentrant whenNotPaused onlyExecutor(_executor) returns (ExecutionStatus) {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
 
         bytes32 id = _computeSwapRequestId(m.receiver, uint64(block.chainid), m.dstChainId, _message);
