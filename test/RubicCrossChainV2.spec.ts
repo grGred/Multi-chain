@@ -9,7 +9,7 @@ import {
     DEFAULT_AMOUNT_IN,
     VERSION,
     ZERO_ADDRESS,
-    DEFAULT_AMOUNT_OUT_MIN
+    DEFAULT_AMOUNT_OUT_MIN, EXECUTOR_ADDRESS
 } from './shared/consts';
 import { BigNumber as BN, BigNumberish, ContractTransaction } from 'ethers';
 import { getRouterV2 } from './shared/utils';
@@ -166,6 +166,7 @@ describe('RubicCrossChainV2', () => {
             },
             _receiver,
             _nonce,
+            '2',
             _nativeOut
         );
     }
@@ -447,7 +448,7 @@ describe('RubicCrossChainV2', () => {
                                 ethers.BigNumber.from('1000000000'),
                                 DST_CHAIN_ID,
                                 message,
-                                ethers.constants.AddressZero
+                                EXECUTOR_ADDRESS
                             )
                         ).to.emit(swapMain, 'SwapRequestDone');
 

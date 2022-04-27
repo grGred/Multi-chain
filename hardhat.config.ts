@@ -91,6 +91,7 @@ module.exports = {
       url: `https://rpc-mainnet.matic.quiknode.pro`,
       chainId: 137,
       accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`],
+      // gasPrice: 100000000000000,
     },
     avaxMainnet: {
       url: `https://api.avax.network/ext/bc/C/rpc`,
@@ -106,7 +107,7 @@ module.exports = {
   etherscan: {
     // Your API key for Etherscan
     // Obtain one at https://etherscan.io/
-    apiKey: `${BSCSCAN_API_KEY}`,
+    apiKey: `${POLYGONSCAN_API_KEY}`,
   },
   solidity: {
     compilers: [DEFAULT_COMPILER_SETTINGS],
