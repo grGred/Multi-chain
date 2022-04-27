@@ -7,7 +7,6 @@ import './TransferSwapV3.sol';
 import './TransferSwapInch.sol';
 import './BridgeSwap.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
-import 'hardhat/console.sol';
 
 contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwap, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -26,7 +25,6 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         }
         nativeWrap = _nativeWrap;
         dstCryptoFee[43114] = 10000000;
-        // dstCryptoFee[250] = 10000000;
         //dstCryptoFee[56] = 10000000;
         feeRubic = 3000; // 0.3%
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -115,7 +113,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
     function executeMessageWithTransferRefund(
         address _token,
         uint256 _amount,
-        bytes calldata _message,
+        bytes memory _message,
         address _executor
     )
         external
