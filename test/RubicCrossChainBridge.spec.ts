@@ -9,10 +9,10 @@ import {
     DEFAULT_AMOUNT_IN,
     VERSION,
     ZERO_ADDRESS,
-    DEFAULT_AMOUNT_OUT_MIN
+    DEFAULT_AMOUNT_OUT_MIN,
+    EXECUTOR_ADDRESS
 } from './shared/consts';
 import { BigNumber as BN, BigNumberish, ContractTransaction } from 'ethers';
-import { getRouterV2 } from './shared/utils';
 const hre = require('hardhat');
 
 const createFixtureLoader = waffle.createFixtureLoader;
@@ -67,7 +67,7 @@ describe('RubicCrossChainBridge', () => {
             {
                 value:
                     nativeIn === null
-                        ? amountIn.add(cryptoFee).add(ethers.utils.parseEther('2')) //TODO: add crypto celer fee
+                        ? amountIn.add(cryptoFee).add(ethers.utils.parseEther('2'))
                         : nativeIn
             }
         );
@@ -107,6 +107,7 @@ describe('RubicCrossChainBridge', () => {
     async function getMessage(
         messagesContract: TestMessages,
         _nonce: BigNumberish,
+        dstChainId: BigNumberish,
         {
             dex = router,
             integrator = ZERO_ADDRESS,
@@ -131,6 +132,7 @@ describe('RubicCrossChainBridge', () => {
             },
             _receiver,
             _nonce,
+            dstChainId,
             _nativeOut
         );
     }
@@ -221,15 +223,15 @@ describe('RubicCrossChainBridge', () => {
 
                 beforeEach('setup before bridge', async () => {
                     nonce = (await swapMain.nonce()).add('1');
-
-                    message = await getMessage(testMessagesContract, nonce, {
+                    const dstChainId = '250';
+                    message = await getMessage(testMessagesContract, nonce, dstChainId, {
                         dex: ZERO_ADDRESS,
                         version: 2, // bridge version
                         path: [transitToken.address],
                         amountOutMinimum: ethers.BigNumber.from('0') // not used
                     });
                 });
-                it('should successfully bridge with rubic fee', async () => {
+                it('should successfully bridge token with rubic fee', async () => {
                     await hre.network.provider.request({
                         method: 'hardhat_impersonateAccount',
                         params: [TEST_BUS]
@@ -252,13 +254,61 @@ describe('RubicCrossChainBridge', () => {
                             ethers.BigNumber.from('1000000000'),
                             DST_CHAIN_ID,
                             message,
-                            ethers.constants.AddressZero
+                            EXECUTOR_ADDRESS
                         )
                     ).to.emit(swapMain, 'SwapRequestDone');
                     let tokenBalanceAfter = await transitToken.balanceOf(swapMain.address);
                     // take only platform comission in transit token
+                    const platformFee = await _swapMain.feeRubic();
                     await expect(Number(tokenBalanceAfter)).to.be.eq(
-                        Number(tokenBalanceBefore) * 0.0016
+                        (Number(tokenBalanceBefore) * Number(platformFee)) / 10 ** 6
+                    );
+                });
+
+                it.only('should successfully bridge native with rubic fee', async () => {
+                    await hre.network.provider.request({
+                        method: 'hardhat_impersonateAccount',
+                        params: [TEST_BUS]
+                    });
+
+                    const bus = await ethers.getSigner(TEST_BUS);
+
+                    await network.provider.send('hardhat_setBalance', [
+                        bus.address,
+                        '0x152D02C7E14AF6800000' // 100000 eth
+                    ]);
+
+                    const _swapMain = swapMain.connect(bus);
+
+                    await network.provider.send('hardhat_setBalance', [
+                        _swapMain.address,
+                        '0x152D02C7E14AF6800000' // 100000 eth
+                    ]);
+
+                    const dstChainId = '250';
+                    message = await getMessage(testMessagesContract, nonce, dstChainId, {
+                        dex: ZERO_ADDRESS,
+                        version: 2, // bridge version
+                        path: [wnative.address],
+                        amountOutMinimum: ethers.BigNumber.from('0') // not used
+                    });
+
+                    let tokenBalanceBefore = await wnative.balanceOf(swapMain.address);
+                    await expect(
+                        _swapMain.executeMessageWithTransfer(
+                            ethers.constants.AddressZero,
+                            wnative.address,
+                            ethers.BigNumber.from('1000000000000000000'), // 1 ether
+                            DST_CHAIN_ID,
+                            message,
+                            EXECUTOR_ADDRESS
+                        )
+                    ).to.emit(swapMain, 'SwapRequestDone');
+                    let tokenBalanceAfter = await wnative.balanceOf(swapMain.address);
+                    // take only platform comission in transit token
+                    const platformFee = await _swapMain.feeRubic();
+                    await expect(Number(tokenBalanceAfter)).to.be.eq(
+                        (Number(tokenBalanceBefore) * Number(platformFee)) / 10 ** 6
                     );
                 });
 
@@ -274,10 +324,10 @@ describe('RubicCrossChainBridge', () => {
                         bus.address,
                         '0x152D02C7E14AF6800000' // 100000 eth
                     ]);
-
+                    const dstChainId = '250';
                     const _swapMain = swapMain.connect(bus);
 
-                    message = await getMessage(testMessagesContract, nonce, {
+                    message = await getMessage(testMessagesContract, nonce, dstChainId, {
                         dex: ZERO_ADDRESS,
                         version: 2, // bridge version
                         path: [transitToken.address, wnative.address],
@@ -291,7 +341,7 @@ describe('RubicCrossChainBridge', () => {
                             ethers.BigNumber.from('1000000000'),
                             DST_CHAIN_ID,
                             message,
-                            ethers.constants.AddressZero
+                            EXECUTOR_ADDRESS
                         )
                     ).to.be.revertedWith('dst bridge expected');
                 });
@@ -301,14 +351,16 @@ describe('RubicCrossChainBridge', () => {
                         await swapMain.setIntegrator(ethers.constants.AddressZero, '3000'); // 0.3 %
                         await swapMain.setRubicShare(ethers.constants.AddressZero, '500000'); // 50 % of integrator fee, 0.15 in total
 
-                        message = await getMessage(testMessagesContract, nonce, {
+                        const dstChainId = '250';
+
+                        message = await getMessage(testMessagesContract, nonce, dstChainId, {
                             dex: ZERO_ADDRESS,
                             version: 2, // bridge version
                             path: [transitToken.address],
                             amountOutMinimum: ethers.BigNumber.from('0') // not used
                         });
                     });
-                    it('should successfully bridge with rubic & integrator fee', async () => {
+                    it('should successfully bridge transitToken with rubic & integrator fee', async () => {
                         await hre.network.provider.request({
                             method: 'hardhat_impersonateAccount',
                             params: [TEST_BUS]
@@ -331,7 +383,7 @@ describe('RubicCrossChainBridge', () => {
                                 ethers.BigNumber.from('1000000000'),
                                 DST_CHAIN_ID,
                                 message,
-                                ethers.constants.AddressZero
+                                EXECUTOR_ADDRESS
                             )
                         ).to.emit(swapMain, 'SwapRequestDone');
 

@@ -77,7 +77,13 @@ contract BridgeSwap is SwapBase {
         require(_amountIn >= minSwapAmount[_srcBridgeToken], 'amount must be greater than min bridge amount');
         require(_dstSwap.path.length > 0, 'empty dst swap path');
         bytes memory message = abi.encode(
-            SwapRequestDest({swap: _dstSwap, receiver: msg.sender, nonce: nonce, nativeOut: _nativeOut, dstChainId: _dstChainId})
+            SwapRequestDest({
+                swap: _dstSwap,
+                receiver: msg.sender,
+                nonce: nonce,
+                nativeOut: _nativeOut,
+                dstChainId: _dstChainId
+            })
         );
         bytes32 id = _computeSwapRequestId(msg.sender, _chainId, _dstChainId, message);
 

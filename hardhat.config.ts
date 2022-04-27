@@ -78,7 +78,7 @@ module.exports = {
       accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`]
     },
     bsc: {
-      url: `https://speedy-nodes-nyc.moralis.io/${BSC_RPC_KEY}/bsc/mainnet`,
+      url: `https://bsc-dataseed.binance.org/`,
       chainId: 56,
       accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`]
     },

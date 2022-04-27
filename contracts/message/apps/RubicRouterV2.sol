@@ -7,6 +7,7 @@ import './TransferSwapV3.sol';
 import './TransferSwapInch.sol';
 import './BridgeSwap.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
+import 'hardhat/console.sol';
 
 contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, BridgeSwap, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -25,7 +26,8 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         }
         nativeWrap = _nativeWrap;
         dstCryptoFee[43114] = 10000000;
-        dstCryptoFee[250] = 10000000;
+        // dstCryptoFee[250] = 10000000;
+        //dstCryptoFee[56] = 10000000;
         feeRubic = 3000; // 0.3%
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER, msg.sender);
@@ -48,7 +50,16 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         uint64 _srcChainId,
         bytes memory _message,
         address _executor
-    ) external payable override onlyMessageBus nonReentrant whenNotPaused onlyExecutor(_executor) returns (ExecutionStatus) {
+    )
+        external
+        payable
+        override
+        onlyMessageBus
+        nonReentrant
+        whenNotPaused
+        onlyExecutor(_executor)
+        returns (ExecutionStatus)
+    {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
         bytes32 id = _computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
 
@@ -78,7 +89,16 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         uint64 _srcChainId,
         bytes memory _message,
         address _executor
-    ) external payable override onlyMessageBus nonReentrant whenNotPaused onlyExecutor(_executor) returns (ExecutionStatus) {
+    )
+        external
+        payable
+        override
+        onlyMessageBus
+        nonReentrant
+        whenNotPaused
+        onlyExecutor(_executor)
+        returns (ExecutionStatus)
+    {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
 
         bytes32 id = _computeSwapRequestId(m.receiver, _srcChainId, uint64(block.chainid), _message);
@@ -97,7 +117,16 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         uint256 _amount,
         bytes calldata _message,
         address _executor
-    ) external payable override onlyMessageBus nonReentrant whenNotPaused onlyExecutor(_executor) returns (ExecutionStatus) {
+    )
+        external
+        payable
+        override
+        onlyMessageBus
+        nonReentrant
+        whenNotPaused
+        onlyExecutor(_executor)
+        returns (ExecutionStatus)
+    {
         SwapRequestDest memory m = abi.decode((_message), (SwapRequestDest));
 
         bytes32 id = _computeSwapRequestId(m.receiver, uint64(block.chainid), m.dstChainId, _message);
@@ -223,14 +252,14 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
 
     function setRubicShare(address _integrator, uint256 _percent) external onlyManager {
         require(_percent <= 1000000, 'incorrect fee amount');
-        // require(_integrator != address(0)); TODO changed for tests
+//        require(_integrator != address(0));
         platformShare[_integrator] = _percent;
     }
 
     // set to 0 to remove integrator
     function setIntegrator(address _integrator, uint256 _percent) external onlyManager {
         require(_percent <= 1000000, 'incorrect fee amount');
-        // require(_integrator != address(0));
+//      require(_integrator != address(0));
         integratorFee[_integrator] = _percent;
     }
 
@@ -258,7 +287,6 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         token.safeTransfer(msg.sender, token.balanceOf(address(this)));
     }
 
-    // TODO check for safety
     // a person without fees collected will be reverted
     function integratorCollectFee(address _token, uint256 _amount) external {
         require(integratorCollectedFee[msg.sender][_token] <= _amount, 'not enough fees');

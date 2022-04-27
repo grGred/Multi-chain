@@ -1,5 +1,5 @@
 import { Fixture } from 'ethereum-waffle';
-import { ethers, network, upgrades } from 'hardhat';
+import { ethers, network } from 'hardhat';
 import { TestERC20 } from '../../typechain-types';
 import { RubicRouterV2 } from '../../typechain-types';
 import { WETH9 } from '../../typechain-types';
@@ -51,12 +51,10 @@ export const swapContractFixtureInFork: Fixture<SwapContractFixture> = async fun
     const router = supportedDEXes[0];
     const routerV3 = supportedDEXes[1];
 
-    const swapMain = (await upgrades.deployProxy(
-        RubicRouterV2Factory,
-        [TEST_BUS, supportedDEXes, TEST_NATIVE],
-        {
-            initializer: 'initialize'
-        }
+    const swapMain = (await RubicRouterV2Factory.deploy(
+        TEST_BUS,
+        supportedDEXes,
+        TEST_NATIVE
     )) as RubicRouterV2;
 
     const testMessagesFactory = await ethers.getContractFactory('TestMessages');
@@ -101,5 +99,14 @@ export const swapContractFixtureInFork: Fixture<SwapContractFixture> = async fun
         '0x152D02C7E14AF6800000' // 100000 eth
     ]);
 
-    return { swapMain, swapToken, transitToken, wnative, router, routerV3, testMessagesContract, messageBus };
+    return {
+        swapMain,
+        swapToken,
+        transitToken,
+        wnative,
+        router,
+        routerV3,
+        testMessagesContract,
+        messageBus
+    };
 };

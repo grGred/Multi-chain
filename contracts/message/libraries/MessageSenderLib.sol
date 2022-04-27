@@ -177,44 +177,44 @@ library MessageSenderLib {
      * @param _fee The fee amount to pay to MessageBus.
      * @return transferId The transfer ID.
      */
-//    function sendMessageWithPegVaultDeposit(
-//        MsgDataTypes.BridgeSendType _bridgeSendType,
-//        address _receiver,
-//        address _token,
-//        uint256 _amount,
-//        uint64 _dstChainId,
-//        uint64 _nonce,
-//        bytes memory _message,
-//        address _messageBus,
-//        uint256 _fee
-//    ) internal returns (bytes32) {
-//        address pegVault;
-//        if (_bridgeSendType == MsgDataTypes.BridgeSendType.PegDeposit) {
-//            pegVault = IMessageBus(_messageBus).pegVault();
-//        } else {
-//            pegVault = IMessageBus(_messageBus).pegVaultV2();
-//        }
-//        IERC20(_token).safeIncreaseAllowance(pegVault, _amount);
-//        bytes32 transferId;
-//        if (_bridgeSendType == MsgDataTypes.BridgeSendType.PegDeposit) {
-//            IOriginalTokenVault(pegVault).deposit(_token, _amount, _dstChainId, _receiver, _nonce);
-//            transferId = keccak256(
-//                abi.encodePacked(address(this), _token, _amount, _dstChainId, _receiver, _nonce, uint64(block.chainid))
-//            );
-//        } else {
-//            transferId = IOriginalTokenVaultV2(pegVault).deposit(_token, _amount, _dstChainId, _receiver, _nonce);
-//        }
-//        if (_message.length > 0) {
-//            IMessageBus(_messageBus).sendMessageWithTransfer{value: _fee}(
-//                _receiver,
-//                _dstChainId,
-//                pegVault,
-//                transferId,
-//                _message
-//            );
-//        }
-//        return transferId;
-//    }
+    //    function sendMessageWithPegVaultDeposit(
+    //        MsgDataTypes.BridgeSendType _bridgeSendType,
+    //        address _receiver,
+    //        address _token,
+    //        uint256 _amount,
+    //        uint64 _dstChainId,
+    //        uint64 _nonce,
+    //        bytes memory _message,
+    //        address _messageBus,
+    //        uint256 _fee
+    //    ) internal returns (bytes32) {
+    //        address pegVault;
+    //        if (_bridgeSendType == MsgDataTypes.BridgeSendType.PegDeposit) {
+    //            pegVault = IMessageBus(_messageBus).pegVault();
+    //        } else {
+    //            pegVault = IMessageBus(_messageBus).pegVaultV2();
+    //        }
+    //        IERC20(_token).safeIncreaseAllowance(pegVault, _amount);
+    //        bytes32 transferId;
+    //        if (_bridgeSendType == MsgDataTypes.BridgeSendType.PegDeposit) {
+    //            IOriginalTokenVault(pegVault).deposit(_token, _amount, _dstChainId, _receiver, _nonce);
+    //            transferId = keccak256(
+    //                abi.encodePacked(address(this), _token, _amount, _dstChainId, _receiver, _nonce, uint64(block.chainid))
+    //            );
+    //        } else {
+    //            transferId = IOriginalTokenVaultV2(pegVault).deposit(_token, _amount, _dstChainId, _receiver, _nonce);
+    //        }
+    //        if (_message.length > 0) {
+    //            IMessageBus(_messageBus).sendMessageWithTransfer{value: _fee}(
+    //                _receiver,
+    //                _dstChainId,
+    //                pegVault,
+    //                transferId,
+    //                _message
+    //            );
+    //        }
+    //        return transferId;
+    //    }
 
     function sendMessageWithPegVaultDeposit(
         MsgDataTypes.BridgeSendType _bridgeSendType,
@@ -241,49 +241,49 @@ library MessageSenderLib {
      * @param _fee The fee amount to pay to MessageBus.
      * @return transferId The transfer ID.
      */
-//    function sendMessageWithPegBridgeBurn(
-//        MsgDataTypes.BridgeSendType _bridgeSendType,
-//        address _receiver,
-//        address _token,
-//        uint256 _amount,
-//        uint64 _dstChainId,
-//        uint64 _nonce,
-//        bytes memory _message,
-//        address _messageBus,
-//        uint256 _fee
-//    ) internal returns (bytes32) {
-//        address pegBridge;
-//        if (_bridgeSendType == MsgDataTypes.BridgeSendType.PegBurn) {
-//            pegBridge = IMessageBus(_messageBus).pegBridge();
-//        } else {
-//            pegBridge = IMessageBus(_messageBus).pegBridgeV2();
-//        }
-//        IERC20(_token).safeIncreaseAllowance(pegBridge, _amount);
-//        bytes32 transferId;
-//        if (_bridgeSendType == MsgDataTypes.BridgeSendType.PegBurn) {
-//            IPeggedTokenBridge(pegBridge).burn(_token, _amount, _receiver, _nonce);
-//            transferId = keccak256(
-//                abi.encodePacked(address(this), _token, _amount, _receiver, _nonce, uint64(block.chainid))
-//            );
-//        } else if (_bridgeSendType == MsgDataTypes.BridgeSendType.PegV2Burn) {
-//            transferId = IPeggedTokenBridgeV2(pegBridge).burn(_token, _amount, _dstChainId, _receiver, _nonce);
-//        } else {
-//            // PegV2BurnFrom
-//            transferId = IPeggedTokenBridgeV2(pegBridge).burnFrom(_token, _amount, _dstChainId, _receiver, _nonce);
-//        }
-//        // handle cases where certain tokens do not spend allowance for role-based burn
-//        IERC20(_token).safeApprove(pegBridge, 0);
-//        if (_message.length > 0) {
-//            IMessageBus(_messageBus).sendMessageWithTransfer{value: _fee}(
-//                _receiver,
-//                _dstChainId,
-//                pegBridge,
-//                transferId,
-//                _message
-//            );
-//        }
-//        return transferId;
-//    }
+    //    function sendMessageWithPegBridgeBurn(
+    //        MsgDataTypes.BridgeSendType _bridgeSendType,
+    //        address _receiver,
+    //        address _token,
+    //        uint256 _amount,
+    //        uint64 _dstChainId,
+    //        uint64 _nonce,
+    //        bytes memory _message,
+    //        address _messageBus,
+    //        uint256 _fee
+    //    ) internal returns (bytes32) {
+    //        address pegBridge;
+    //        if (_bridgeSendType == MsgDataTypes.BridgeSendType.PegBurn) {
+    //            pegBridge = IMessageBus(_messageBus).pegBridge();
+    //        } else {
+    //            pegBridge = IMessageBus(_messageBus).pegBridgeV2();
+    //        }
+    //        IERC20(_token).safeIncreaseAllowance(pegBridge, _amount);
+    //        bytes32 transferId;
+    //        if (_bridgeSendType == MsgDataTypes.BridgeSendType.PegBurn) {
+    //            IPeggedTokenBridge(pegBridge).burn(_token, _amount, _receiver, _nonce);
+    //            transferId = keccak256(
+    //                abi.encodePacked(address(this), _token, _amount, _receiver, _nonce, uint64(block.chainid))
+    //            );
+    //        } else if (_bridgeSendType == MsgDataTypes.BridgeSendType.PegV2Burn) {
+    //            transferId = IPeggedTokenBridgeV2(pegBridge).burn(_token, _amount, _dstChainId, _receiver, _nonce);
+    //        } else {
+    //            // PegV2BurnFrom
+    //            transferId = IPeggedTokenBridgeV2(pegBridge).burnFrom(_token, _amount, _dstChainId, _receiver, _nonce);
+    //        }
+    //        // handle cases where certain tokens do not spend allowance for role-based burn
+    //        IERC20(_token).safeApprove(pegBridge, 0);
+    //        if (_message.length > 0) {
+    //            IMessageBus(_messageBus).sendMessageWithTransfer{value: _fee}(
+    //                _receiver,
+    //                _dstChainId,
+    //                pegBridge,
+    //                transferId,
+    //                _message
+    //            );
+    //        }
+    //        return transferId;
+    //    }
 
     function sendMessageWithPegBridgeBurn(
         MsgDataTypes.BridgeSendType _bridgeSendType,
@@ -295,6 +295,5 @@ library MessageSenderLib {
         bytes memory _message,
         address _messageBus,
         uint256 _fee
-    ) internal returns (bytes32 transferId) {
-    }
+    ) internal returns (bytes32 transferId) {}
 }

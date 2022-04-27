@@ -15,11 +15,11 @@ async function main() {
   // USDC token address in BSC: 0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d
   // SUSHI: 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506
 
-  const CrossChainSwapDeploy = await CrossChainSwap.deploy(
-      '0x223fB0CeB2C6e5310264EFe38151d7D083db91f1',
-      '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506',
-      '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
-  );
+  // const CrossChainSwapDeploy = await CrossChainSwap.deploy(
+  //     '0x223fB0CeB2C6e5310264EFe38151d7D083db91f1',
+  //     '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506',
+  //     '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
+  // );
 
   // MATIC Polygon 137
   // MessageBus 0x265B25e22bcd7f10a5bD6E6410F10537Cc7567e8
