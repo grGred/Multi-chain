@@ -250,14 +250,14 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
 
     function setRubicShare(address _integrator, uint256 _percent) external onlyManager {
         require(_percent <= 1000000, 'incorrect fee amount');
-//        require(_integrator != address(0));
+        require(_integrator != address(0));
         platformShare[_integrator] = _percent;
     }
 
     // set to 0 to remove integrator
     function setIntegrator(address _integrator, uint256 _percent) external onlyManager {
         require(_percent <= 1000000, 'incorrect fee amount');
-//      require(_integrator != address(0));
+        require(_integrator != address(0));
         integratorFee[_integrator] = _percent;
     }
 

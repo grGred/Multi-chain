@@ -10,7 +10,7 @@ import {
     VERSION,
     ZERO_ADDRESS,
     DEFAULT_AMOUNT_OUT_MIN,
-    EXECUTOR_ADDRESS
+    EXECUTOR_ADDRESS, feeDecimals, INTEGRATOR
 } from './shared/consts';
 import { BigNumber as BN, BigNumberish, ContractTransaction } from 'ethers';
 const hre = require('hardhat');
@@ -110,7 +110,7 @@ describe('RubicCrossChainBridge', () => {
         dstChainId: BigNumberish,
         {
             dex = router,
-            integrator = ZERO_ADDRESS,
+            integrator = INTEGRATOR,
             version = VERSION,
             path = [wnative.address, transitToken.address],
             pathV3 = '0x',
@@ -223,8 +223,8 @@ describe('RubicCrossChainBridge', () => {
 
                 beforeEach('setup before bridge', async () => {
                     nonce = (await swapMain.nonce()).add('1');
-                    const dstChainId = '250';
-                    message = await getMessage(testMessagesContract, nonce, dstChainId, {
+
+                    message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
                         dex: ZERO_ADDRESS,
                         version: 2, // bridge version
                         path: [transitToken.address],
@@ -261,11 +261,11 @@ describe('RubicCrossChainBridge', () => {
                     // take only platform comission in transit token
                     const platformFee = await _swapMain.feeRubic();
                     await expect(Number(tokenBalanceAfter)).to.be.eq(
-                        (Number(tokenBalanceBefore) * Number(platformFee)) / 10 ** 6
+                        (Number(tokenBalanceBefore) * Number(platformFee)) / feeDecimals
                     );
                 });
 
-                it.only('should successfully bridge native with rubic fee', async () => {
+                it('should successfully bridge native with rubic fee', async () => {
                     await hre.network.provider.request({
                         method: 'hardhat_impersonateAccount',
                         params: [TEST_BUS]
@@ -277,16 +277,26 @@ describe('RubicCrossChainBridge', () => {
                         bus.address,
                         '0x152D02C7E14AF6800000' // 100000 eth
                     ]);
+                    const abiCoder = ethers.utils.defaultAbiCoder;
+
+                    const storageBalancePositionWeth = ethers.utils.keccak256(
+                        abiCoder.encode(['address'], [bus.address]) +
+                            abiCoder.encode(['uint256'], [3]).slice(2, 66)
+                    );
+
+                    await network.provider.send('hardhat_setStorageAt', [
+                        wnative.address,
+                        storageBalancePositionWeth,
+                        abiCoder.encode(['uint256'], [ethers.utils.parseEther('100000')])
+                    ]);
+
+                    await wnative
+                        .connect(bus)
+                        .transfer(swapMain.address, ethers.utils.parseEther('1'));
 
                     const _swapMain = swapMain.connect(bus);
 
-                    await network.provider.send('hardhat_setBalance', [
-                        _swapMain.address,
-                        '0x152D02C7E14AF6800000' // 100000 eth
-                    ]);
-
-                    const dstChainId = '250';
-                    message = await getMessage(testMessagesContract, nonce, dstChainId, {
+                    message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
                         dex: ZERO_ADDRESS,
                         version: 2, // bridge version
                         path: [wnative.address],
@@ -308,7 +318,7 @@ describe('RubicCrossChainBridge', () => {
                     // take only platform comission in transit token
                     const platformFee = await _swapMain.feeRubic();
                     await expect(Number(tokenBalanceAfter)).to.be.eq(
-                        (Number(tokenBalanceBefore) * Number(platformFee)) / 10 ** 6
+                        (Number(tokenBalanceBefore) * Number(platformFee)) / feeDecimals
                     );
                 });
 
@@ -324,10 +334,10 @@ describe('RubicCrossChainBridge', () => {
                         bus.address,
                         '0x152D02C7E14AF6800000' // 100000 eth
                     ]);
-                    const dstChainId = '250';
+
                     const _swapMain = swapMain.connect(bus);
 
-                    message = await getMessage(testMessagesContract, nonce, dstChainId, {
+                    message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
                         dex: ZERO_ADDRESS,
                         version: 2, // bridge version
                         path: [transitToken.address, wnative.address],
@@ -348,18 +358,17 @@ describe('RubicCrossChainBridge', () => {
 
                 describe('target bridge should take integrator & rubic fee', async () => {
                     beforeEach('set integrator and rubic fee', async () => {
-                        await swapMain.setIntegrator(ethers.constants.AddressZero, '3000'); // 0.3 %
-                        await swapMain.setRubicShare(ethers.constants.AddressZero, '500000'); // 50 % of integrator fee, 0.15 in total
+                        await swapMain.setIntegrator(INTEGRATOR, '3000'); // 0.3 %
+                        await swapMain.setRubicShare(INTEGRATOR, '500000'); // 50 % of integrator fee, 0.15 in total
 
-                        const dstChainId = '250';
-
-                        message = await getMessage(testMessagesContract, nonce, dstChainId, {
+                        message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
                             dex: ZERO_ADDRESS,
                             version: 2, // bridge version
                             path: [transitToken.address],
                             amountOutMinimum: ethers.BigNumber.from('0') // not used
                         });
                     });
+
                     it('should successfully bridge transitToken with rubic & integrator fee', async () => {
                         await hre.network.provider.request({
                             method: 'hardhat_impersonateAccount',
@@ -387,22 +396,29 @@ describe('RubicCrossChainBridge', () => {
                             )
                         ).to.emit(swapMain, 'SwapRequestDone');
 
-                        let tokenBalanceAfter = await transitToken.balanceOf(swapMain.address);
+                        const tokenBalanceAfter = await transitToken.balanceOf(swapMain.address);
                         const collectedFee1 = await swapMain.collectedFee(transitToken.address);
-
                         const integratorCollectedFee1 = await swapMain.integratorCollectedFee(
-                            ethers.constants.AddressZero,
+                            INTEGRATOR,
                             transitToken.address
                         );
 
+                        const integratorFee =
+                            Number(await _swapMain.integratorFee(INTEGRATOR)) / feeDecimals;
+                        const platformFee =
+                            (integratorFee * Number(await _swapMain.platformShare(INTEGRATOR))) /
+                            feeDecimals;
+
+                        await expect(Number(integratorCollectedFee1)).to.be.eq(
+                            Number(tokenBalanceBefore) * (Number(integratorFee) - platformFee)
+                        );
+                        // take platform comission in transit token
                         await expect(Number(collectedFee1)).to.be.eq(
-                            Number(integratorCollectedFee1)
+                            Number(tokenBalanceBefore) * Number(platformFee)
                         );
 
-                        await expect(Number(collectedFee1)).to.be.eq(1500000);
-                        // take platform comission in transit token
                         await expect(Number(tokenBalanceAfter)).to.be.eq(
-                            Number(tokenBalanceBefore) * 0.003
+                            Number(integratorFee) * Number(tokenBalanceBefore)
                         );
                     });
                 });

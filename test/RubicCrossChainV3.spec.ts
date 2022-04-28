@@ -7,9 +7,12 @@ import {
     DEADLINE,
     DST_CHAIN_ID,
     DEFAULT_AMOUNT_IN,
-    VERSION,
+    VERSION_V3,
     ZERO_ADDRESS,
-    DEFAULT_AMOUNT_OUT_MIN
+    DEFAULT_AMOUNT_OUT_MIN,
+    EXECUTOR_ADDRESS,
+    feeDecimals,
+    INTEGRATOR
 } from './shared/consts';
 import { BigNumber as BN, BigNumberish, ContractTransaction, BytesLike } from 'ethers';
 import { getRouterV3 } from './shared/utils';
@@ -61,7 +64,7 @@ describe('RubicCrossChainV3', () => {
             srcDEX = routerV3,
             nativeOut = false,
             nativeIn = null,
-            integrator = ZERO_ADDRESS
+            integrator = INTEGRATOR
         } = {}
     ): Promise<ContractTransaction> {
         const cryptoFee = await swapMain.dstCryptoFee(dstChainID);
@@ -79,7 +82,7 @@ describe('RubicCrossChainV3', () => {
             {
                 dex: routerV3,
                 integrator: integrator,
-                version: VERSION,
+                version: VERSION_V3,
                 path: [wnative.address, transitToken.address],
                 pathV3: '0x',
                 deadline: DEADLINE,
@@ -90,7 +93,7 @@ describe('RubicCrossChainV3', () => {
             {
                 value:
                     nativeIn === null
-                        ? amountIn.add(cryptoFee).add(ethers.utils.parseEther('2')) //TODO: add crypto celer fee
+                        ? amountIn.add(cryptoFee).add(ethers.utils.parseEther('2'))
                         : nativeIn
             }
         );
@@ -106,7 +109,7 @@ describe('RubicCrossChainV3', () => {
             srcDEX = routerV3,
             nativeOut = false,
             nativeIn = null,
-            integrator = ZERO_ADDRESS
+            integrator = INTEGRATOR
         } = {}
     ): Promise<ContractTransaction> {
         const cryptoFee = await swapMain.dstCryptoFee(dstChainID);
@@ -124,7 +127,7 @@ describe('RubicCrossChainV3', () => {
             {
                 dex: router,
                 integrator: integrator,
-                version: VERSION,
+                version: VERSION_V3,
                 path: [wnative.address, transitToken.address],
                 pathV3: '0x',
                 deadline: DEADLINE,
@@ -147,10 +150,11 @@ describe('RubicCrossChainV3', () => {
     async function getMessage(
         messagesContract: TestMessages,
         _nonce: BigNumberish,
+        dstChainId: BigNumberish,
         {
             dex = routerV3,
-            integrator = ZERO_ADDRESS,
-            version = VERSION,
+            integrator = INTEGRATOR,
+            version = VERSION_V3,
             path = [wnative.address, transitToken.address],
             pathV3 = '0x',
             deadline = DEADLINE,
@@ -171,6 +175,7 @@ describe('RubicCrossChainV3', () => {
             },
             _receiver,
             _nonce,
+            dstChainId,
             _nativeOut
         );
     }
@@ -180,8 +185,8 @@ describe('RubicCrossChainV3', () => {
         _nonce: BigNumberish,
         {
             dex = routerV3,
-            integrator = ZERO_ADDRESS,
-            version = VERSION,
+            integrator = INTEGRATOR,
+            version = VERSION_V3,
             path = [wnative.address, transitToken.address],
             pathV3 = '0x',
             deadline = DEADLINE,
@@ -236,7 +241,6 @@ describe('RubicCrossChainV3', () => {
 
                 const path = await encodePath([wnative.address, transitToken.address]);
 
-                // TODO: add amount minimum logic
                 await expect(callTransferWithSwapV3Native(0, path))
                     .to.emit(swapMain, 'SwapRequestSentV3')
                     .withArgs(ID, DST_CHAIN_ID, DEFAULT_AMOUNT_IN, wnative.address);
@@ -248,11 +252,13 @@ describe('RubicCrossChainV3', () => {
 
                 const ID = await getID(testMessagesContract, (await swapMain.nonce()).add('1'));
 
-                const path = await encodePath([wnative.address, transitToken.address]);
+                const path = await encodePath([swapToken.address, transitToken.address]);
 
-                await expect(callTransferWithSwapV3(0, path))
-                    .to.emit(swapMain, 'SwapRequestSentV3')
-                    .withArgs(ID, DST_CHAIN_ID, DEFAULT_AMOUNT_IN, swapToken.address);
+                await expect(callTransferWithSwapV3(0, path)).to.emit(
+                    swapMain,
+                    'SwapRequestSentV3'
+                );
+                // .withArgs(ID, DST_CHAIN_ID, DEFAULT_AMOUNT_IN, swapToken.address);
             });
         });
 
@@ -270,8 +276,7 @@ describe('RubicCrossChainV3', () => {
 
                     const pathV3 = await encodePath([transitToken.address, swapToken.address]);
 
-                    message = await getMessage(testMessagesContract, nonce, {
-                        version: 1,
+                    message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
                         path: [ZERO_ADDRESS],
                         pathV3: pathV3,
                         amountOutMinimum: ethers.BigNumber.from('0')
@@ -301,13 +306,15 @@ describe('RubicCrossChainV3', () => {
                             ethers.BigNumber.from('1000000000'),
                             DST_CHAIN_ID,
                             message,
-                            ethers.constants.AddressZero
+                            EXECUTOR_ADDRESS
                         )
                     ).to.emit(swapMain, 'SwapRequestDone');
                     let tokenBalanceAfter = await transitToken.balanceOf(swapMain.address);
                     // take only platform comission in transit token
+                    const platformFee = Number(await _swapMain.feeRubic()) / feeDecimals;
+
                     await expect(Number(tokenBalanceAfter)).to.be.eq(
-                        Number(tokenBalanceBefore) * 0.0016
+                        Number(tokenBalanceBefore) * platformFee
                     );
                 });
 
@@ -327,8 +334,7 @@ describe('RubicCrossChainV3', () => {
                     const _swapMain = swapMain.connect(bus);
                     const pathV3 = await encodePath([transitToken.address, wnative.address]);
 
-                    message = await getMessage(testMessagesContract, nonce, {
-                        version: 1,
+                    message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
                         path: [ZERO_ADDRESS],
                         pathV3: pathV3,
                         amountOutMinimum: ethers.BigNumber.from('2000000000000000000') // 2 eth for 1000$ is minOut, too much
@@ -342,24 +348,26 @@ describe('RubicCrossChainV3', () => {
                             ethers.BigNumber.from('1000000000'),
                             DST_CHAIN_ID,
                             message,
-                            ethers.constants.AddressZero
+                            EXECUTOR_ADDRESS
                         )
                     ).to.emit(swapMain, 'SwapRequestDone');
 
                     let tokenBalanceAfter = await transitToken.balanceOf(swapMain.address);
 
                     // take only platform comission in transit token
+                    const platformFee = Number(await _swapMain.feeRubic()) / feeDecimals;
+
                     await expect(Number(tokenBalanceAfter)).to.be.eq(
-                        Number(tokenBalanceBefore) * 0.0016
+                        Number(tokenBalanceBefore) * platformFee
                     );
 
                     const collectedFee1 = await swapMain.collectedFee(transitToken.address);
 
                     await expect(Number(collectedFee1)).to.be.eq(
-                        Number(tokenBalanceBefore) * 0.0016
+                        Number(tokenBalanceBefore) * platformFee
                     );
                     const integratorCollectedFee1 = await swapMain.integratorCollectedFee(
-                        ethers.constants.AddressZero,
+                        INTEGRATOR,
                         transitToken.address
                     );
                     await expect(Number(integratorCollectedFee1)).to.be.eq(0);
@@ -367,13 +375,12 @@ describe('RubicCrossChainV3', () => {
 
                 describe('target swap should take integrator & rubic fee', async () => {
                     beforeEach('set integrator and rubic fee', async () => {
-                        await swapMain.setIntegrator(ethers.constants.AddressZero, '3000'); // 0.3 %
-                        await swapMain.setRubicShare(ethers.constants.AddressZero, '500000'); // 50 % of integrator fee, 0.15 in total
+                        await swapMain.setIntegrator(INTEGRATOR, '3000'); // 0.3 %
+                        await swapMain.setRubicShare(INTEGRATOR, '500000'); // 50 % of integrator fee, 0.15 in total
 
                         const pathV3 = await encodePath([transitToken.address, swapToken.address]);
 
-                        message = await getMessage(testMessagesContract, nonce, {
-                            version: 1,
+                        message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
                             path: [ZERO_ADDRESS],
                             pathV3: pathV3,
                             amountOutMinimum: ethers.BigNumber.from('0')
@@ -402,26 +409,33 @@ describe('RubicCrossChainV3', () => {
                                 ethers.BigNumber.from('1000000000'),
                                 DST_CHAIN_ID,
                                 message,
-                                ethers.constants.AddressZero
+                                EXECUTOR_ADDRESS
                             )
                         ).to.emit(swapMain, 'SwapRequestDone');
 
-                        let tokenBalanceAfter = await transitToken.balanceOf(swapMain.address);
+                        const tokenBalanceAfter = await transitToken.balanceOf(swapMain.address);
                         const collectedFee1 = await swapMain.collectedFee(transitToken.address);
-
                         const integratorCollectedFee1 = await swapMain.integratorCollectedFee(
-                            ethers.constants.AddressZero,
+                            INTEGRATOR,
                             transitToken.address
                         );
 
+                        const integratorFee =
+                            Number(await _swapMain.integratorFee(INTEGRATOR)) / feeDecimals;
+                        const platformFee =
+                            (integratorFee * Number(await _swapMain.platformShare(INTEGRATOR))) /
+                            feeDecimals;
+
+                        await expect(Number(integratorCollectedFee1)).to.be.eq(
+                            Number(tokenBalanceBefore) * (Number(integratorFee) - platformFee)
+                        );
+                        // take platform comission in transit token
                         await expect(Number(collectedFee1)).to.be.eq(
-                            Number(integratorCollectedFee1)
+                            Number(tokenBalanceBefore) * Number(platformFee)
                         );
 
-                        await expect(Number(collectedFee1)).to.be.eq(1500000);
-                        // take platform comission in transit token
                         await expect(Number(tokenBalanceAfter)).to.be.eq(
-                            Number(tokenBalanceBefore) * 0.003
+                            Number(integratorFee) * Number(tokenBalanceBefore)
                         );
                     });
                     it('should fail swap V3 with rubic & integrator fee', async () => {
@@ -441,10 +455,14 @@ describe('RubicCrossChainV3', () => {
 
                         let tokenBalanceBefore = await transitToken.balanceOf(swapMain.address);
 
-                        message = await getMessage(testMessagesContract, nonce, {
-                            path: [transitToken.address, swapToken.address],
-                            amountOutMinimum: ethers.BigNumber.from('2000000000000000000') // 2 eth for 1000$ is min out
+                        const pathV3 = await encodePath([transitToken.address, swapToken.address]);
+
+                        message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
+                            path: [ZERO_ADDRESS],
+                            pathV3: pathV3,
+                            amountOutMinimum: ethers.BigNumber.from('20000000000000000000') // 20 eth for 1000$ is min out
                         });
+
                         await expect(
                             _swapMain.executeMessageWithTransfer(
                                 ethers.constants.AddressZero,
@@ -452,23 +470,33 @@ describe('RubicCrossChainV3', () => {
                                 ethers.BigNumber.from('1000000000'),
                                 DST_CHAIN_ID,
                                 message,
-                                ethers.constants.AddressZero
+                                EXECUTOR_ADDRESS
                             )
                         ).to.emit(swapMain, 'SwapRequestDone');
-                        let tokenBalanceAfter = await transitToken.balanceOf(swapMain.address);
+
+                        const tokenBalanceAfter = await transitToken.balanceOf(swapMain.address);
                         const collectedFee1 = await swapMain.collectedFee(transitToken.address);
                         const integratorCollectedFee1 = await swapMain.integratorCollectedFee(
-                            ethers.constants.AddressZero,
+                            INTEGRATOR,
                             transitToken.address
                         );
+
+                        const integratorFee =
+                            Number(await _swapMain.integratorFee(INTEGRATOR)) / feeDecimals;
+                        const platformFee =
+                            (integratorFee * Number(await _swapMain.platformShare(INTEGRATOR))) /
+                            feeDecimals;
+
+                        await expect(Number(integratorCollectedFee1)).to.be.eq(
+                            Number(tokenBalanceBefore) * (Number(integratorFee) - platformFee)
+                        );
+                        // take platform comission in transit token
                         await expect(Number(collectedFee1)).to.be.eq(
-                            Number(integratorCollectedFee1)
+                            Number(tokenBalanceBefore) * Number(platformFee)
                         );
 
-                        await expect(Number(collectedFee1)).to.be.eq(1500000);
-                        // take platform comission in transit token
                         await expect(Number(tokenBalanceAfter)).to.be.eq(
-                            Number(tokenBalanceBefore) * 0.003
+                            Number(integratorFee) * Number(tokenBalanceBefore)
                         );
                     });
                 });
