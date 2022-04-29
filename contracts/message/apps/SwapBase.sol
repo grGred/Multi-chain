@@ -37,7 +37,6 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControl, Pausab
 
     // erc20 wrap of gas token of this chain, eg. WETH
     address public nativeWrap;
-    address public executorAddr;
 
     // minimal amount of bridged token
     mapping(address => uint256) public minSwapAmount;

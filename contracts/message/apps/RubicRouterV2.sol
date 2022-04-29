@@ -298,13 +298,13 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
 
     function integratorCollectFee(address _token, uint256 _amount) external nonReentrant {
         require(integratorFee[msg.sender] > 0, 'not an integrator');
-        require(integratorCollectedFee[msg.sender][_token] <= _amount, 'not enough fees');
+        require(integratorCollectedFee[msg.sender][_token] >= _amount, 'not enough fees');
         _sendToken(_token, _amount, msg.sender);
         integratorCollectedFee[msg.sender][_token] -= _amount;
     }
 
     function rubicCollectPlatformFee(address _token, uint256 _amount) external onlyManager {
-        require(collectedFee[_token] <= _amount, 'amount to big');
+        require(collectedFee[_token] >= _amount, 'amount too big');
         _sendToken(_token, _amount, msg.sender);
         collectedFee[_token] -= _amount;
     }
@@ -316,6 +316,14 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
 
     function setNativeWrap(address _nativeWrap) external onlyManager {
         nativeWrap = _nativeWrap;
+    }
+
+    function setMinSwapAmount(address _token ,uint256 _amount) external onlyManager {
+        minSwapAmount[_token] = _amount;
+    }
+
+    function setMaxSwapAmount(address _token ,uint256 _amount) external onlyManager {
+        maxSwapAmount[_token] = _amount;
     }
 
     function setMessageBus(address _messageBus) public onlyManager {
