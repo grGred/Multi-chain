@@ -18,6 +18,7 @@
     "dotenv": "^10.0.0",
     "ganache-core": "^2.13.2",
     "hardhat": "^2.7.0",
+    "keythereum": "^1.2.0",
     "truffle-plugin-verify": "^0.5.15",
     "web3": "^1.6.0"
   },

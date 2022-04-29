@@ -29,7 +29,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         _setupRole(DEFAULT_ADMIN_ROLE, 0x105A3BA3637A29D36F61c7F03f55Da44B4591Cd1);
         _setupRole(MANAGER, 0x105A3BA3637A29D36F61c7F03f55Da44B4591Cd1);
         _setupRole(MANAGER, msg.sender);
-        _setupRole(EXECUTOR, 0x645144372C15d5AA59E343353610Cc7C5A926289);
+        _setupRole(EXECUTOR, 0xfe99d38697e107FDAc6e4bFEf876564f70041594);
     }
 
     /**
@@ -259,6 +259,14 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         require(_percent <= 1000000, 'incorrect fee amount');
         require(_integrator != address(0));
         integratorFee[_integrator] = _percent;
+    }
+
+    function pauseRubic() external onlyManager {
+        _pause();
+    }
+
+    function unPauseRubic() external onlyManager {
+        _unpause();
     }
 
     function setCryptoFee(uint64 _networkID, uint256 _amount) external onlyManager {
