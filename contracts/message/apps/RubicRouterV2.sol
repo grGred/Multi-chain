@@ -24,10 +24,13 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
             supportedDEXes.add(_supportedDEXes[i]);
         }
         nativeWrap = _nativeWrap;
-        dstCryptoFee[43114] = 10000000;
-        //dstCryptoFee[56] = 10000000;
-        feeRubic = 3000; // 0.3%
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        feeRubic = 3000;
+        // for tests
+        maxSwapAmount[0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174] = 10000 ether;
+        maxSwapAmount[0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270] = 10000 ether;
+
+        _setupRole(DEFAULT_ADMIN_ROLE, 0x105A3BA3637A29D36F61c7F03f55Da44B4591Cd1);
+        _setupRole(MANAGER, 0x105A3BA3637A29D36F61c7F03f55Da44B4591Cd1);
         _setupRole(MANAGER, msg.sender);
         _setupRole(EXECUTOR, 0x645144372C15d5AA59E343353610Cc7C5A926289);
     }
@@ -281,32 +284,23 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         return supportedDEXes.values();
     }
 
-    function sweepTokens(IERC20 token) external onlyManager {
-        token.safeTransfer(msg.sender, token.balanceOf(address(this)));
+    function sweepTokens(
+        address _token,
+        uint256 _amount
+    ) external onlyManager {
+        _sendToken(_token, _amount, msg.sender);
     }
 
-    // a person without fees collected will be reverted
-    function integratorCollectFee(address _token, uint256 _amount) external {
+    function integratorCollectFee(address _token, uint256 _amount) external nonReentrant {
+        require(integratorFee[msg.sender] > 0, 'not an integrator');
         require(integratorCollectedFee[msg.sender][_token] <= _amount, 'not enough fees');
-        if (_token == nativeWrap) {
-            IWETH(nativeWrap).withdraw(_amount);
-            (bool sent, ) = payable(msg.sender).call{value: _amount, gas: 50000}('');
-            require(sent, 'failed to send native');
-        } else {
-            IERC20(_token).safeTransfer(msg.sender, _amount);
-        }
+        _sendToken(_token, _amount, msg.sender);
         integratorCollectedFee[msg.sender][_token] -= _amount;
     }
 
-    function rubicCollectFee(address _token, uint256 _amount) external onlyManager {
+    function rubicCollectFee(address _token, uint256 _amount) external onlyManager nonReentrant {
         require(collectedFee[_token] <= _amount, 'amount to big');
-        if (_token == nativeWrap) {
-            IWETH(nativeWrap).withdraw(_amount);
-            (bool sent, ) = payable(msg.sender).call{value: _amount, gas: 50000}('');
-            require(sent, 'failed to send native');
-        } else {
-            IERC20(_token).safeTransfer(msg.sender, _amount);
-        }
+        _sendToken(_token, _amount, msg.sender);
         collectedFee[_token] -= _amount;
     }
 

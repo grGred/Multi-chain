@@ -113,8 +113,12 @@ contract TransferSwapV2 is SwapBase {
         }
 
         require(
-            srcAmtOut >= minSwapAmount[_srcSwap.path[_srcSwap.path.length - 1]],
+            srcAmtOut >= minSwapAmount[srcTokenOut],
             'amount must be greater than min swap amount'
+        );
+        require(
+            srcAmtOut <= maxSwapAmount[srcTokenOut],
+            'amount must be lower than max swap amount'
         );
 
         _crossChainTransferWithSwapV2(

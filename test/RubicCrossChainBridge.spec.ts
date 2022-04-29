@@ -62,7 +62,7 @@ describe('RubicCrossChainBridge', () => {
                 deadline: DEADLINE,
                 amountOutMinimum: DEFAULT_AMOUNT_OUT_MIN
             },
-            '10',
+            '10000',
             nativeOut,
             {
                 value:
@@ -98,7 +98,7 @@ describe('RubicCrossChainBridge', () => {
                 deadline: DEADLINE,
                 amountOutMinimum: DEFAULT_AMOUNT_OUT_MIN
             },
-            '10',
+            '10000',
             nativeOut,
             { value: nativeIn === null ? cryptoFee.add(ethers.utils.parseEther('0.01')) : nativeIn }
         );

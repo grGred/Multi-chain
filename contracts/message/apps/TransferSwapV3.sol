@@ -112,8 +112,12 @@ contract TransferSwapV3 is SwapBase {
         }
 
         require(
-            srcAmtOut >= minSwapAmount[address(_getLastBytes20(_srcSwap.path))],
+            srcAmtOut >= minSwapAmount[srcTokenOut],
             'amount must be greater than min swap amount'
+        );
+        require(
+            srcAmtOut <= maxSwapAmount[srcTokenOut],
+            'amount must be lower than max swap amount'
         );
 
         _crossChainTransferWithSwapV3(

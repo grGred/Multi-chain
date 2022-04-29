@@ -42,6 +42,9 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControl, Pausab
     // minimal amount of bridged token
     mapping(address => uint256) public minSwapAmount;
 
+    // maximum amount of bridged token
+    mapping(address => uint256) public maxSwapAmount;
+
     uint64 public nonce;
 
     // Role of the manager
