@@ -25,9 +25,6 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         }
         nativeWrap = _nativeWrap;
         feeRubic = 3000;
-        // for tests
-        maxSwapAmount[0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174] = 10000 ether;
-        maxSwapAmount[0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270] = 10000 ether;
 
         _setupRole(DEFAULT_ADMIN_ROLE, 0x105A3BA3637A29D36F61c7F03f55Da44B4591Cd1);
         _setupRole(MANAGER, 0x105A3BA3637A29D36F61c7F03f55Da44B4591Cd1);
@@ -298,10 +295,15 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         integratorCollectedFee[msg.sender][_token] -= _amount;
     }
 
-    function rubicCollectFee(address _token, uint256 _amount) external onlyManager nonReentrant {
+    function rubicCollectPlatformFee(address _token, uint256 _amount) external onlyManager {
         require(collectedFee[_token] <= _amount, 'amount to big');
         _sendToken(_token, _amount, msg.sender);
         collectedFee[_token] -= _amount;
+    }
+
+    function rubicCollectCryptoFee(uint256 _amount) external onlyManager {
+        (bool sent, ) = msg.sender.call{value: _amount, gas: 50000}('');
+        require(sent, 'failed to send native');
     }
 
     function setNativeWrap(address _nativeWrap) external onlyManager {

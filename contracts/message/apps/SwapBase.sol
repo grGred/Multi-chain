@@ -160,9 +160,8 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControl, Pausab
     // ============== fee logic ==============
 
     function _calculateCryptoFee(uint256 _fee, uint64 _dstChainId) internal returns (uint256 updatedFee) {
-        require(_fee > dstCryptoFee[_dstChainId], 'too few crypto fee');
+        require(_fee >= dstCryptoFee[_dstChainId], 'too few crypto fee');
         uint256 _updatedFee = _fee - dstCryptoFee[_dstChainId];
-        collectedFee[nativeWrap] += dstCryptoFee[_dstChainId];
         return (_updatedFee);
     }
 

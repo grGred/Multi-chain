@@ -105,12 +105,10 @@ contract TransferSwapV2 is SwapBase {
         address srcTokenOut = _srcSwap.path[_srcSwap.path.length - 1];
         uint256 srcAmtOut = _amountIn;
 
-        // swap source token for intermediate token on the source DEX
-        if (_srcSwap.path.length > 1) {
-            bool success;
-            (success, srcAmtOut) = _trySwapV2(_srcSwap, _amountIn);
-            if (!success) revert('src swap failed');
-        }
+        // swap source token for transit token on the source DEX
+        bool success;
+        (success, srcAmtOut) = _trySwapV2(_srcSwap, _amountIn);
+        if (!success) revert('src swap failed');
 
         require(
             srcAmtOut >= minSwapAmount[srcTokenOut],

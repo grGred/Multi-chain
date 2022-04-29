@@ -104,16 +104,14 @@ contract TransferSwapInch is SwapBase {
         address srcTokenOut = _srcSwap.path[_srcSwap.path.length - 1];
         uint256 srcAmtOut = _amountIn;
 
-        // swap source token for intermediate token on the source DEX
-        if (_srcSwap.path.length > 1) {
-            bool success;
-            if (_srcSwap.path[0] == nativeWrap) {
-                (success, srcAmtOut) = _trySwapNativeInch(_srcSwap, _amountIn);
-            } else {
-                (success, srcAmtOut) = _trySwapInch(_srcSwap, _amountIn);
-            }
-            if (!success) revert('src swap failed');
+        // swap source token for transit token on the source DEX
+        bool success;
+        if (_srcSwap.path[0] == nativeWrap) {
+            (success, srcAmtOut) = _trySwapNativeInch(_srcSwap, _amountIn);
+        } else {
+            (success, srcAmtOut) = _trySwapInch(_srcSwap, _amountIn);
         }
+        if (!success) revert('src swap failed');
 
         require(
             srcAmtOut >= minSwapAmount[srcTokenOut],
