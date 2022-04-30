@@ -113,14 +113,8 @@ contract TransferSwapInch is SwapBase {
         }
         if (!success) revert('src swap failed');
 
-        require(
-            srcAmtOut >= minSwapAmount[srcTokenOut],
-            'amount must be greater than min swap amount'
-        );
-        require(
-            srcAmtOut <= maxSwapAmount[srcTokenOut],
-            'amount must be lower than max swap amount'
-        );
+        require(srcAmtOut >= minSwapAmount[srcTokenOut], 'amount must be greater than min swap amount');
+        require(srcAmtOut <= maxSwapAmount[srcTokenOut], 'amount must be lower than max swap amount');
 
         _crossChainTransferWithSwapInch(
             _receiver,

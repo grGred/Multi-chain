@@ -51,6 +51,8 @@ module.exports = {
     },
     eth: {
       url: `https://mainnet.infura.io/v3/${INFURA_ID_PROJECT}`,
+      chainId: 1,
+      accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`],
     },
     ropsten: {
       url: `https://ropsten.infura.io/v3/${INFURA_ID_PROJECT}`,
@@ -87,11 +89,10 @@ module.exports = {
       chainId: 80001,
       accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`],
     },
-    polygonMainnet: {
+    polygon: {
       url: `https://rpc-mainnet.matic.quiknode.pro`,
       chainId: 137,
       accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`],
-      // gasPrice: 100000000000000,
     },
     avaxMainnet: {
       url: `https://api.avax.network/ext/bc/C/rpc`,

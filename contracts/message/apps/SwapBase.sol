@@ -29,20 +29,27 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControl, Pausab
     // integrator -> percent for Rubic
     mapping(address => uint256) public platformShare;
 
-    // platform Rubic fee
-    uint256 public feeRubic;
-
     // Crypto fee amount blockchainId -> fee amount
     mapping(uint64 => uint256) public dstCryptoFee;
 
-    // erc20 wrap of gas token of this chain, eg. WETH
-    address public nativeWrap;
+    /** Shows tx status with transfer id
+     *  Null, - tx hasnt arrived yet
+     *  Succeeded, - tx successfully executed on dst chain
+     *  Failed, - tx failed on src chain, transfer transit token back to EOA
+     *  Fallback - tx failed on dst chain, transfer transit token back to EOA
+     */
+    mapping(bytes32 => SwapStatus) public txStatusById;
 
     // minimal amount of bridged token
     mapping(address => uint256) public minSwapAmount;
-
     // maximum amount of bridged token
     mapping(address => uint256) public maxSwapAmount;
+
+    // platform Rubic fee
+    uint256 public feeRubic;
+
+    // erc20 wrap of gas token of this chain, eg. WETH
+    address public nativeWrap;
 
     uint64 public nonce;
 

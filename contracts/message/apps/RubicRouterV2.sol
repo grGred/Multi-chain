@@ -79,6 +79,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
      * @notice called by MessageBus when the executeMessageWithTransfer call fails. does nothing but emitting a "fail" event
      * @param _srcChainId source chain ID
      * @param _message SwapRequest message that defines the swap behavior on this destination chain
+     * execution on dst chain
      */
     function executeMessageWithTransferFallback(
         address, // _sender
@@ -103,7 +104,9 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
 
         _sendToken(_token, _amount, m.receiver);
 
-        emit SwapRequestDone(id, 0, SwapStatus.Failed);
+        SwapStatus status = SwapStatus.Fallback;
+        txStatusById[id] = status;
+        emit SwapRequestDone(id, 0, status);
         // always return Fail to mark this transfer as failed since if this function is called then there nothing more
         // we can do in this app as the swap failures are already handled in executeMessageWithTransfer
         return ExecutionStatus.Fail;
@@ -131,7 +134,9 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
 
         _sendToken(_token, _amount, m.receiver);
 
-        emit SwapRequestDone(id, 0, SwapStatus.Succeeded);
+        SwapStatus status = SwapStatus.Failed;
+        txStatusById[id] = status;
+        emit SwapRequestDone(id, 0, status);
 
         return ExecutionStatus.Success;
     }
@@ -149,7 +154,9 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         );
         require(_msgDst.swap.path.length == 1, 'dst bridge expected');
         _sendToken(_msgDst.swap.path[0], _amount, _msgDst.receiver);
-        SwapStatus status = SwapStatus.Succeeded;
+
+        SwapStatus status;
+        txStatusById[_id] = status;
         emit SwapRequestDone(_id, _amount, status);
     }
 
@@ -166,7 +173,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         require(_msgDst.swap.path.length > 1, 'dst swap expected');
 
         uint256 dstAmount;
-        SwapStatus status = SwapStatus.Succeeded;
+        SwapStatus status;
 
         SwapInfoV2 memory _dstSwap = SwapInfoV2({
             dex: _msgDst.swap.dex,
@@ -180,14 +187,14 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         if (success) {
             _sendToken(_dstSwap.path[_dstSwap.path.length - 1], dstAmount, _msgDst.receiver);
             status = SwapStatus.Succeeded;
+            txStatusById[_id] = status;
         } else {
             // handle swap failure, send the received token directly to receiver
             _sendToken(_token, _amount, _msgDst.receiver);
             dstAmount = _amount;
             status = SwapStatus.Fallback;
+            txStatusById[_id] = status;
         }
-
-        status = SwapStatus.Succeeded;
 
         emit SwapRequestDone(_id, dstAmount, status);
     }
@@ -205,7 +212,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         require(_msgDst.swap.pathV3.length > 20, 'dst swap expected');
 
         uint256 dstAmount;
-        SwapStatus status = SwapStatus.Succeeded;
+        SwapStatus status;
 
         SwapInfoV3 memory _dstSwap = SwapInfoV3({
             dex: _msgDst.swap.dex,
@@ -219,11 +226,13 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         if (success) {
             _sendToken(address(_getLastBytes20(_dstSwap.path)), dstAmount, _msgDst.receiver);
             status = SwapStatus.Succeeded;
+            txStatusById[_id] = status;
         } else {
             // handle swap failure, send the received token directly to receiver
             _sendToken(_token, _amount, _msgDst.receiver);
             dstAmount = _amount;
             status = SwapStatus.Fallback;
+            txStatusById[_id] = status;
         }
 
         emit SwapRequestDone(_id, dstAmount, status);
@@ -289,10 +298,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         return supportedDEXes.values();
     }
 
-    function sweepTokens(
-        address _token,
-        uint256 _amount
-    ) external onlyManager {
+    function sweepTokens(address _token, uint256 _amount) external onlyManager {
         _sendToken(_token, _amount, msg.sender);
     }
 
@@ -318,11 +324,11 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         nativeWrap = _nativeWrap;
     }
 
-    function setMinSwapAmount(address _token ,uint256 _amount) external onlyManager {
+    function setMinSwapAmount(address _token, uint256 _amount) external onlyManager {
         minSwapAmount[_token] = _amount;
     }
 
-    function setMaxSwapAmount(address _token ,uint256 _amount) external onlyManager {
+    function setMaxSwapAmount(address _token, uint256 _amount) external onlyManager {
         maxSwapAmount[_token] = _amount;
     }
 
