@@ -238,19 +238,42 @@ describe('RubicCrossChainV3', () => {
         describe('#transferWithSwapV3Native', () => {
             it('Should swap native and transfer through Celer', async () => {
                 const ID = await getID(testMessagesContract, (await swapMain.nonce()).add('1'));
-                await swapMain.setMaxSwapAmount(transitToken.address, ethers.utils.parseEther('1000'));
+                await swapMain.setMaxSwapAmount(
+                    transitToken.address,
+                    ethers.utils.parseEther('1000')
+                );
+
+                const path = await encodePath([wnative.address, transitToken.address]);
+                const _amountIn = ethers.BigNumber.from('20000000000000000000');
+
+                await expect(
+                    callTransferWithSwapV3Native(0, path, {
+                        amountIn: _amountIn
+                    })
+                )
+                    .to.emit(swapMain, 'SwapRequestSentV3')
+                    .withArgs(ID, DST_CHAIN_ID, _amountIn, wnative.address);
+            });
+            it('Should fail transfer through Celer', async () => {
+                await swapMain.setMaxSwapAmount(
+                    transitToken.address,
+                    ethers.utils.parseEther('1000')
+                );
 
                 const path = await encodePath([wnative.address, transitToken.address]);
 
-                await expect(callTransferWithSwapV3Native(0, path))
-                    .to.emit(swapMain, 'SwapRequestSentV3')
-                    .withArgs(ID, DST_CHAIN_ID, DEFAULT_AMOUNT_IN, wnative.address);
+                await expect(callTransferWithSwapV3Native(0, path)).to.be.revertedWith(
+                    'amount too small'
+                );
             });
         });
         describe('#transferWithSwapV3', () => {
             it('Should swap transitToken and transfer through Сeler', async () => {
                 await swapToken.approve(swapMain.address, ethers.constants.MaxUint256);
-                await swapMain.setMaxSwapAmount(transitToken.address, ethers.utils.parseEther('1000'));
+                await swapMain.setMaxSwapAmount(
+                    transitToken.address,
+                    ethers.utils.parseEther('1000')
+                );
                 const ID = await getID(testMessagesContract, (await swapMain.nonce()).add('1'));
 
                 const path = await encodePath([swapToken.address, transitToken.address]);
