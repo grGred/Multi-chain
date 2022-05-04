@@ -46,7 +46,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         address _token,
         uint256 _amount,
         uint64 _srcChainId,
-        bytes memory _message,
+        bytes calldata _message,
         address _executor
     )
         external
@@ -86,7 +86,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
         address _token,
         uint256 _amount,
         uint64 _srcChainId,
-        bytes memory _message,
+        bytes calldata _message,
         address _executor
     )
         external
@@ -106,7 +106,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
 
         SwapStatus status = SwapStatus.Fallback;
         txStatusById[id] = status;
-        emit SwapRequestDone(id, 0, status);
+        emit SwapRequestDone(id, _amount, status);
         // always return Fail to mark this transfer as failed since if this function is called then there nothing more
         // we can do in this app as the swap failures are already handled in executeMessageWithTransfer
         return ExecutionStatus.Fail;
@@ -116,7 +116,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
     function executeMessageWithTransferRefund(
         address _token,
         uint256 _amount,
-        bytes memory _message,
+        bytes calldata _message,
         address _executor
     )
         external
@@ -136,7 +136,7 @@ contract RubicRouterV2 is TransferSwapV2, TransferSwapV3, TransferSwapInch, Brid
 
         SwapStatus status = SwapStatus.Failed;
         txStatusById[id] = status;
-        emit SwapRequestDone(id, 0, status);
+        emit SwapRequestDone(id, _amount, status);
 
         return ExecutionStatus.Success;
     }

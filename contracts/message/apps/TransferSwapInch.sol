@@ -106,11 +106,7 @@ contract TransferSwapInch is SwapBase {
 
         // swap source token for transit token on the source DEX
         bool success;
-        if (_srcSwap.path[0] == nativeWrap) {
-            (success, srcAmtOut) = _trySwapNativeInch(_srcSwap, _amountIn);
-        } else {
-            (success, srcAmtOut) = _trySwapInch(_srcSwap, _amountIn);
-        }
+        (success, srcAmtOut) = _trySwapInch(_srcSwap, _amountIn);
         if (!success) revert('src swap failed');
 
         require(srcAmtOut >= minSwapAmount[srcTokenOut], 'amount must be greater than min swap amount');
@@ -186,30 +182,6 @@ contract TransferSwapInch is SwapBase {
             _fee
         );
         emit SwapRequestSentInch(id, _dstChainId, _amountIn, _srcSwap.path[0]);
-    }
-
-    function _trySwapNativeInch(SwapInfoInch memory _swap, uint256 _amount)
-        internal
-        returns (bool ok, uint256 amountOut)
-    {
-        if (!supportedDEXes.contains(_swap.dex)) {
-            return (false, 0);
-        }
-
-        smartApprove(IERC20(_swap.path[0]), _amount, _swap.dex);
-
-        IERC20 Transit = IERC20(_swap.path[_swap.path.length - 1]);
-        uint256 transitBalanceBefore = Transit.balanceOf(address(this));
-
-        Address.functionCallWithValue(_swap.dex, _swap.data, _amount);
-
-        uint256 balanceDif = Transit.balanceOf(address(this)) - transitBalanceBefore;
-
-        if (balanceDif >= _swap.amountOutMinimum) {
-            return (true, balanceDif);
-        }
-
-        return (false, 0);
     }
 
     function _trySwapInch(SwapInfoInch memory _swap, uint256 _amount) internal returns (bool ok, uint256 amountOut) {
