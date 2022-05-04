@@ -10,7 +10,10 @@ import {
     VERSION,
     ZERO_ADDRESS,
     DEFAULT_AMOUNT_OUT_MIN,
-    EXECUTOR_ADDRESS, feeDecimals, INTEGRATOR
+    EXECUTOR_ADDRESS,
+    feeDecimals,
+    INTEGRATOR,
+    DEFAULT_AMOUNT_IN_USDC
 } from './shared/consts';
 import { BigNumber as BN, BigNumberish, ContractTransaction } from 'ethers';
 const hre = require('hardhat');
@@ -21,7 +24,7 @@ const envConfig = require('dotenv').config();
 const {
     ROUTERS_POLYGON: TEST_ROUTERS,
     NATIVE_POLYGON: TEST_NATIVE,
-    BUS_POLYGON: TEST_BUS
+    BUS_POLYGON_MAIN: TEST_BUS
 } = envConfig.parsed || {};
 
 describe('RubicCrossChainBridge', () => {
@@ -194,6 +197,7 @@ describe('RubicCrossChainBridge', () => {
     describe('#WithBridgeTests', () => {
         describe('#bridgeWithSwapNative', () => {
             it('Should bridge native and transfer through Celer', async () => {
+                await swapMain.setMaxSwapAmount(wnative.address, ethers.utils.parseEther('1000'));
                 const ID = await getID(testMessagesContract, (await swapMain.nonce()).add('1'));
 
                 await expect(callbridgeWithSwapNative())
@@ -202,14 +206,45 @@ describe('RubicCrossChainBridge', () => {
             });
         });
         describe('#bridgeWithSwap', () => {
+            it('Should fail transfering with big amount', async () => {
+                await transitToken.approve(swapMain.address, ethers.constants.MaxUint256);
+                await swapMain.setMaxSwapAmount(
+                    transitToken.address,
+                    ethers.utils.parseEther('1000')
+                );
+
+                await expect(callbridgeWithSwap()).to.be.revertedWith('amount too large');
+            });
+
+            it('Should fail transfering with small amount', async () => {
+                await transitToken.approve(swapMain.address, ethers.constants.MaxUint256);
+                await swapMain.setMaxSwapAmount(
+                    transitToken.address,
+                    ethers.utils.parseEther('1000')
+                );
+
+                await expect(
+                    callbridgeWithSwap({
+                        amountIn: ethers.BigNumber.from('10000000')
+                    })
+                ).to.be.revertedWith('amount too small');
+            });
             it('Should bridge transitToken and transfer through Сeler', async () => {
                 await transitToken.approve(swapMain.address, ethers.constants.MaxUint256);
+                await swapMain.setMaxSwapAmount(
+                    transitToken.address,
+                    ethers.utils.parseEther('1000')
+                );
 
                 const ID = await getID(testMessagesContract, (await swapMain.nonce()).add('1'));
 
-                await expect(callbridgeWithSwap())
+                await expect(
+                    callbridgeWithSwap({
+                        amountIn: DEFAULT_AMOUNT_IN_USDC
+                    })
+                )
                     .to.emit(swapMain, 'BridgeRequestSent')
-                    .withArgs(ID, DST_CHAIN_ID, DEFAULT_AMOUNT_IN, transitToken.address);
+                    .withArgs(ID, DST_CHAIN_ID, DEFAULT_AMOUNT_IN_USDC, transitToken.address);
             });
         });
         describe('#executeMessageWithTransfer', () => {

@@ -11,4 +11,5 @@ export const feeDecimals = 10 ** 6;
 export const EXECUTOR_ADDRESS = '0xfe99d38697e107FDAc6e4bFEf876564f70041594';
 export const DEFAULT_AMOUNT_IN = ethers.utils.parseEther('1');
 export const DEFAULT_AMOUNT_OUT_MIN = ethers.utils.parseEther('1');
-export const DEFAULT_AMOUNT_IN_USDC = '100000000';
+export const DEFAULT_AMOUNT_IN_USDC = ethers.BigNumber.from('100000000');
+export const DEFAULT_AMOUNT_IN_SWAPTOKEN = ethers.BigNumber.from('100000000000000000000');

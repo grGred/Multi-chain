@@ -12,7 +12,8 @@ import {
     DEFAULT_AMOUNT_OUT_MIN,
     EXECUTOR_ADDRESS,
     INTEGRATOR,
-    feeDecimals
+    feeDecimals,
+    DEFAULT_AMOUNT_IN_USDC
 } from './shared/consts';
 import { BigNumber as BN, BigNumberish, ContractTransaction } from 'ethers';
 import { getRouterV2 } from './shared/utils';
@@ -24,7 +25,7 @@ const envConfig = require('dotenv').config();
 const {
     ROUTERS_POLYGON: TEST_ROUTERS,
     NATIVE_POLYGON: TEST_NATIVE,
-    BUS_POLYGON: TEST_BUS
+    BUS_POLYGON_MAIN: TEST_BUS
 } = envConfig.parsed || {};
 
 describe('RubicCrossChainV2', () => {
@@ -67,7 +68,7 @@ describe('RubicCrossChainV2', () => {
             },
             {
                 dex: router,
-                integrator: INTEGRATOR,
+                integrator: integrator,
                 version: VERSION_V2,
                 path: [wnative.address, transitToken.address],
                 pathV3: '0x',
@@ -79,7 +80,7 @@ describe('RubicCrossChainV2', () => {
             {
                 value:
                     nativeIn === null
-                        ? amountIn.add(cryptoFee).add(ethers.utils.parseEther('2')) //TODO: add crypto celer fee
+                        ? amountIn.add(cryptoFee).add(ethers.utils.parseEther('0.1'))
                         : nativeIn
             }
         );
@@ -112,7 +113,7 @@ describe('RubicCrossChainV2', () => {
             },
             {
                 dex: router,
-                integrator: INTEGRATOR,
+                integrator: integrator,
                 version: VERSION_V2,
                 path: [wnative.address, transitToken.address],
                 pathV3: '0x',
@@ -232,7 +233,28 @@ describe('RubicCrossChainV2', () => {
     describe('#WithSwapTests', () => {
         describe('#transferWithSwapV2Native', () => {
             it('Should swap native to token and transfer through Celer', async () => {
-                const ID = await getID(testMessagesContract, (await swapMain.nonce()).add('1'));
+                await swapMain.setMaxSwapAmount(
+                    transitToken.address,
+                    ethers.utils.parseEther('1000')
+                );
+
+                const amountOutMin = await getAmountOutMin(
+                    ethers.BigNumber.from('20000000000000000000')
+                );
+                const _amountIn = ethers.BigNumber.from('20000000000000000000');
+
+                await expect(
+                    callTransferWithSwapV2Native(amountOutMin, {
+                        amountIn: _amountIn,
+                        srcPath: [wnative.address, transitToken.address]
+                    })
+                ).to.emit(swapMain, 'SwapRequestSentV2');
+            });
+            it('Should swap native to token and fail transfer through Celer', async () => {
+                await swapMain.setMaxSwapAmount(
+                    transitToken.address,
+                    ethers.utils.parseEther('1000')
+                );
 
                 const amountOutMin = await getAmountOutMin();
 
@@ -240,14 +262,16 @@ describe('RubicCrossChainV2', () => {
                     callTransferWithSwapV2Native(amountOutMin, {
                         srcPath: [wnative.address, transitToken.address]
                     })
-                )
-                    .to.emit(swapMain, 'SwapRequestSentV2')
-                    .withArgs(ID, DST_CHAIN_ID, DEFAULT_AMOUNT_IN, wnative.address);
+                ).to.be.revertedWith('amount too small');
             });
         });
         describe('#transferWithSwapV2', () => {
-            it('Should swap transitToken and transfer through Сeler', async () => {
+            it('Should swap token to transitToken and transfer through Сeler', async () => {
                 await swapToken.approve(swapMain.address, ethers.constants.MaxUint256);
+                await swapMain.setMaxSwapAmount(
+                    transitToken.address,
+                    ethers.utils.parseEther('1000')
+                );
 
                 const amountOutMin = await getAmountOutMin(DEFAULT_AMOUNT_IN, [
                     swapToken.address,
@@ -259,6 +283,27 @@ describe('RubicCrossChainV2', () => {
                 await expect(
                     callTransferWithSwapV2(amountOutMin, {
                         srcPath: [swapToken.address, transitToken.address]
+                    })
+                )
+                    .to.emit(swapMain, 'SwapRequestSentV2')
+                    .withArgs(ID, DST_CHAIN_ID, DEFAULT_AMOUNT_IN, swapToken.address);
+            });
+
+            it('Should swap token to native and transfer through Сeler', async () => {
+                await swapToken.approve(swapMain.address, ethers.constants.MaxUint256);
+                await swapMain.setMaxSwapAmount(wnative.address, ethers.utils.parseEther('10000'));
+
+                // amountIn is 100$
+                const amountOutMin = await getAmountOutMin(DEFAULT_AMOUNT_IN_USDC, [
+                    swapToken.address,
+                    wnative.address
+                ]);
+
+                const ID = await getID(testMessagesContract, (await swapMain.nonce()).add('1'));
+
+                await expect(
+                    callTransferWithSwapV2(amountOutMin, {
+                        srcPath: [swapToken.address, wnative.address]
                     })
                 )
                     .to.emit(swapMain, 'SwapRequestSentV2')
@@ -277,7 +322,7 @@ describe('RubicCrossChainV2', () => {
                 beforeEach('setup before swap', async () => {
                     nonce = (await swapMain.nonce()).add('1');
 
-                    message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID,{
+                    message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
                         path: [transitToken.address, swapToken.address],
                         amountOutMinimum: ethers.BigNumber.from('200000000000000000') // 0.2 eth for 1000$ is min
                     });
@@ -331,7 +376,7 @@ describe('RubicCrossChainV2', () => {
 
                     const _swapMain = swapMain.connect(bus);
 
-                    message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID,{
+                    message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
                         path: [transitToken.address, swapToken.address],
                         amountOutMinimum: ethers.BigNumber.from('2000000000000000000') // 2 eth for 1000$ is minOut, too much
                     });
@@ -448,7 +493,7 @@ describe('RubicCrossChainV2', () => {
 
                         let tokenBalanceBefore = await transitToken.balanceOf(swapMain.address);
 
-                        message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID,{
+                        message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
                             path: [transitToken.address, wnative.address],
                             amountOutMinimum: ethers.BigNumber.from('20000000000000000') // 0.02 eth for 1000$ is minOut
                         });
@@ -507,7 +552,7 @@ describe('RubicCrossChainV2', () => {
 
                         let tokenBalanceBefore = await transitToken.balanceOf(swapMain.address);
 
-                        message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID,{
+                        message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
                             path: [transitToken.address, swapToken.address],
                             amountOutMinimum: ethers.BigNumber.from('20000000000000000000') // 20 eth for 1000$ is min out
                         });

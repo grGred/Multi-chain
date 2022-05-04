@@ -14,7 +14,7 @@ const envConfig = require('dotenv').config();
 const {
     ROUTERS_POLYGON: TEST_ROUTERS,
     NATIVE_POLYGON: TEST_NATIVE,
-    BUS_POLYGON: TEST_BUS,
+    BUS_POLYGON_MAIN: TEST_BUS,
     TRANSIT_POLYGON: TEST_TRANSIT,
     SWAP_TOKEN_POLYGON: TEST_SWAP_TOKEN
 } = envConfig.parsed || {};

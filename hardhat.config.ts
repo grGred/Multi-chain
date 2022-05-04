@@ -90,7 +90,7 @@ module.exports = {
       accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`],
     },
     polygon: {
-      url: `https://rpc-mainnet.matic.quiknode.pro`,
+      url: `https://polygon-rpc.com`,
       chainId: 137,
       accounts: [`0x${MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000'}`],
     },

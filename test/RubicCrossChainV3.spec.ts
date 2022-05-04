@@ -24,7 +24,7 @@ const envConfig = require('dotenv').config();
 const {
     ROUTERS_POLYGON: TEST_ROUTERS,
     NATIVE_POLYGON: TEST_NATIVE,
-    BUS_POLYGON: TEST_BUS
+    BUS_POLYGON_MAIN: TEST_BUS
 } = envConfig.parsed || {};
 
 describe('RubicCrossChainV3', () => {
@@ -238,6 +238,7 @@ describe('RubicCrossChainV3', () => {
         describe('#transferWithSwapV3Native', () => {
             it('Should swap native and transfer through Celer', async () => {
                 const ID = await getID(testMessagesContract, (await swapMain.nonce()).add('1'));
+                await swapMain.setMaxSwapAmount(transitToken.address, ethers.utils.parseEther('1000'));
 
                 const path = await encodePath([wnative.address, transitToken.address]);
 
@@ -249,7 +250,7 @@ describe('RubicCrossChainV3', () => {
         describe('#transferWithSwapV3', () => {
             it('Should swap transitToken and transfer through Сeler', async () => {
                 await swapToken.approve(swapMain.address, ethers.constants.MaxUint256);
-
+                await swapMain.setMaxSwapAmount(transitToken.address, ethers.utils.parseEther('1000'));
                 const ID = await getID(testMessagesContract, (await swapMain.nonce()).add('1'));
 
                 const path = await encodePath([swapToken.address, transitToken.address]);
