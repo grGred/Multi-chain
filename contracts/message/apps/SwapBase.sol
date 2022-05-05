@@ -122,7 +122,6 @@ contract SwapBase is MessageSenderApp, MessageReceiverApp, AccessControl, Pausab
         SwapInfoDest swap;
         address receiver; // EOA
         uint64 nonce;
-        bool nativeOut;
         uint64 dstChainId;
     }
 

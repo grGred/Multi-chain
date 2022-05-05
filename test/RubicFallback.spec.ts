@@ -6,12 +6,10 @@ import { expect } from 'chai';
 import {
     DEADLINE,
     DST_CHAIN_ID,
-    DEFAULT_AMOUNT_IN,
     VERSION,
     ZERO_ADDRESS,
     DEFAULT_AMOUNT_OUT_MIN,
     EXECUTOR_ADDRESS,
-    feeDecimals,
     INTEGRATOR,
     DEFAULT_AMOUNT_IN_USDC
 } from './shared/consts';
@@ -52,8 +50,7 @@ describe('RubicFallback', () => {
             pathV3 = '0x',
             deadline = DEADLINE,
             amountOutMinimum = DEFAULT_AMOUNT_OUT_MIN,
-            _receiver = wallet.address,
-            _nativeOut = false
+            _receiver = wallet.address
         } = {}
     ): Promise<string> {
         return messagesContract.getMessage(
@@ -68,8 +65,7 @@ describe('RubicFallback', () => {
             },
             _receiver,
             _nonce,
-            dstChainId,
-            _nativeOut
+            dstChainId
         );
     }
 
@@ -103,8 +99,7 @@ describe('RubicFallback', () => {
                 deadline,
                 amountOutMinimum
             },
-            _nonce,
-            _nativeOut
+            _nonce
         );
     }
 

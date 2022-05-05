@@ -45,7 +45,6 @@ describe('RubicCrossChainBridge', () => {
         amountIn = DEFAULT_AMOUNT_IN,
         dstChainID = DST_CHAIN_ID,
         srcBridgeToken = wnative.address,
-        nativeOut = false,
         nativeIn = null,
         integrator = ZERO_ADDRESS
     } = {}): Promise<ContractTransaction> {
@@ -66,7 +65,6 @@ describe('RubicCrossChainBridge', () => {
                 amountOutMinimum: DEFAULT_AMOUNT_OUT_MIN
             },
             '10000',
-            nativeOut,
             {
                 value:
                     nativeIn === null
@@ -81,7 +79,6 @@ describe('RubicCrossChainBridge', () => {
         amountIn = DEFAULT_AMOUNT_IN,
         dstChainID = DST_CHAIN_ID,
         srcBridgeToken = transitToken.address,
-        nativeOut = false,
         nativeIn = null,
         integrator = ZERO_ADDRESS
     } = {}): Promise<ContractTransaction> {
@@ -102,7 +99,6 @@ describe('RubicCrossChainBridge', () => {
                 amountOutMinimum: DEFAULT_AMOUNT_OUT_MIN
             },
             '10000',
-            nativeOut,
             { value: nativeIn === null ? cryptoFee.add(ethers.utils.parseEther('0.01')) : nativeIn }
         );
     }
@@ -135,8 +131,7 @@ describe('RubicCrossChainBridge', () => {
             },
             _receiver,
             _nonce,
-            dstChainId,
-            _nativeOut
+            dstChainId
         );
     }
 
@@ -170,8 +165,7 @@ describe('RubicCrossChainBridge', () => {
                 deadline,
                 amountOutMinimum
             },
-            _nonce,
-            _nativeOut
+            _nonce
         );
     }
 

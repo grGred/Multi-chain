@@ -17,8 +17,7 @@ contract TransferSwapInch is SwapBase {
         uint64 _dstChainId,
         SwapInfoInch calldata _srcSwap,
         SwapInfoDest calldata _dstSwap,
-        uint32 _maxBridgeSlippage,
-        bool _nativeOut
+        uint32 _maxBridgeSlippage
     ) external payable onlyEOA whenNotPaused {
         require(_srcSwap.path[0] == nativeWrap, 'token mismatch');
         require(msg.value >= _amountIn, 'Amount insufficient');
@@ -33,7 +32,6 @@ contract TransferSwapInch is SwapBase {
             _srcSwap,
             _dstSwap,
             _maxBridgeSlippage,
-            _nativeOut,
             _fee
         );
     }
@@ -44,8 +42,7 @@ contract TransferSwapInch is SwapBase {
         uint64 _dstChainId,
         SwapInfoInch calldata _srcSwap,
         SwapInfoDest calldata _dstSwap,
-        uint32 _maxBridgeSlippage,
-        bool _nativeOut
+        uint32 _maxBridgeSlippage
     ) external payable onlyEOA whenNotPaused {
         IERC20(_srcSwap.path[0]).safeTransferFrom(msg.sender, address(this), _amountIn);
 
@@ -58,7 +55,6 @@ contract TransferSwapInch is SwapBase {
             _srcSwap,
             _dstSwap,
             _maxBridgeSlippage,
-            _nativeOut,
             _fee
         );
     }
@@ -84,7 +80,6 @@ contract TransferSwapInch is SwapBase {
         SwapInfoInch calldata _srcSwap,
         SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
-        bool _nativeOut,
         uint256 _fee
     ) private {
         nonce += 1;
@@ -112,7 +107,6 @@ contract TransferSwapInch is SwapBase {
             _dstSwap,
             _maxBridgeSlippage,
             nonce,
-            _nativeOut,
             _fee,
             srcTokenOut,
             srcAmtOut
@@ -128,7 +122,6 @@ contract TransferSwapInch is SwapBase {
         SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
         uint64 _nonce,
-        bool _nativeOut,
         uint256 _fee,
         address srcTokenOut,
         uint256 srcAmtOut
@@ -139,7 +132,6 @@ contract TransferSwapInch is SwapBase {
                 swap: _dstSwap,
                 receiver: msg.sender,
                 nonce: nonce,
-                nativeOut: _nativeOut,
                 dstChainId: _dstChainId
             })
         );

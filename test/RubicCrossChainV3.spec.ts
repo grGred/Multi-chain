@@ -15,7 +15,7 @@ import {
     INTEGRATOR
 } from './shared/consts';
 import { BigNumber as BN, BigNumberish, ContractTransaction, BytesLike } from 'ethers';
-import { getRouterV3 } from './shared/utils';
+// import { getRouterV3 } from './shared/utils';
 const hre = require('hardhat');
 
 const createFixtureLoader = waffle.createFixtureLoader;
@@ -62,7 +62,6 @@ describe('RubicCrossChainV3', () => {
             amountIn = DEFAULT_AMOUNT_IN,
             dstChainID = DST_CHAIN_ID,
             srcDEX = routerV3,
-            nativeOut = false,
             nativeIn = null,
             integrator = INTEGRATOR
         } = {}
@@ -89,7 +88,6 @@ describe('RubicCrossChainV3', () => {
                 amountOutMinimum: DEFAULT_AMOUNT_OUT_MIN
             },
             '10000',
-            nativeOut,
             {
                 value:
                     nativeIn === null
@@ -107,7 +105,6 @@ describe('RubicCrossChainV3', () => {
             amountIn = DEFAULT_AMOUNT_IN,
             dstChainID = DST_CHAIN_ID,
             srcDEX = routerV3,
-            nativeOut = false,
             nativeIn = null,
             integrator = INTEGRATOR
         } = {}
@@ -134,7 +131,6 @@ describe('RubicCrossChainV3', () => {
                 amountOutMinimum: DEFAULT_AMOUNT_OUT_MIN
             },
             '10000',
-            nativeOut,
             { value: nativeIn === null ? cryptoFee.add(ethers.utils.parseEther('0.01')) : nativeIn }
         );
     }
@@ -175,8 +171,7 @@ describe('RubicCrossChainV3', () => {
             },
             _receiver,
             _nonce,
-            dstChainId,
-            _nativeOut
+            dstChainId
         );
     }
 
@@ -210,8 +205,7 @@ describe('RubicCrossChainV3', () => {
                 deadline,
                 amountOutMinimum
             },
-            _nonce,
-            _nativeOut
+            _nonce
         );
     }
 
@@ -274,7 +268,7 @@ describe('RubicCrossChainV3', () => {
                     transitToken.address,
                     ethers.utils.parseEther('1000')
                 );
-                const ID = await getID(testMessagesContract, (await swapMain.nonce()).add('1'));
+                // const ID = await getID(testMessagesContract, (await swapMain.nonce()).add('1'));
 
                 const path = await encodePath([swapToken.address, transitToken.address]);
 

@@ -15,8 +15,7 @@ contract BridgeSwap is SwapBase {
         uint64 _dstChainId,
         address _srcBridgeToken,
         SwapInfoDest calldata _dstSwap,
-        uint32 _maxBridgeSlippage,
-        bool _nativeOut
+        uint32 _maxBridgeSlippage
     ) external payable onlyEOA {
         IERC20(_srcBridgeToken).safeTransferFrom(msg.sender, address(this), _amountIn);
 
@@ -29,7 +28,6 @@ contract BridgeSwap is SwapBase {
             _srcBridgeToken,
             _dstSwap,
             _maxBridgeSlippage,
-            _nativeOut,
             _fee
         );
     }
@@ -40,8 +38,7 @@ contract BridgeSwap is SwapBase {
         uint64 _dstChainId,
         address _srcBridgeToken,
         SwapInfoDest calldata _dstSwap,
-        uint32 _maxBridgeSlippage,
-        bool _nativeOut
+        uint32 _maxBridgeSlippage
     ) external payable onlyEOA {
         require(_srcBridgeToken == nativeWrap, 'token mismatch');
         require(msg.value >= _amountIn, 'Amount insufficient');
@@ -56,7 +53,6 @@ contract BridgeSwap is SwapBase {
             _srcBridgeToken,
             _dstSwap,
             _maxBridgeSlippage,
-            _nativeOut,
             _fee
         );
     }
@@ -68,7 +64,6 @@ contract BridgeSwap is SwapBase {
         address _srcBridgeToken,
         SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
-        bool _nativeOut,
         uint256 _fee
     ) private {
         nonce += 1;
@@ -84,7 +79,6 @@ contract BridgeSwap is SwapBase {
                 swap: _dstSwap,
                 receiver: msg.sender,
                 nonce: nonce,
-                nativeOut: _nativeOut,
                 dstChainId: _dstChainId
             })
         );

@@ -8,7 +8,6 @@ import {
     DST_CHAIN_ID,
     DEFAULT_AMOUNT_IN,
     VERSION_V2,
-    ZERO_ADDRESS,
     DEFAULT_AMOUNT_OUT_MIN,
     EXECUTOR_ADDRESS,
     INTEGRATOR,
@@ -49,7 +48,6 @@ describe('RubicCrossChainV2', () => {
             dstChainID = DST_CHAIN_ID,
             srcDEX = router,
             srcPath = [wnative.address, transitToken.address],
-            nativeOut = false,
             nativeIn = null,
             integrator = INTEGRATOR
         } = {}
@@ -76,7 +74,6 @@ describe('RubicCrossChainV2', () => {
                 amountOutMinimum: DEFAULT_AMOUNT_OUT_MIN
             },
             '10000',
-            nativeOut,
             {
                 value:
                     nativeIn === null
@@ -94,7 +91,6 @@ describe('RubicCrossChainV2', () => {
             dstChainID = DST_CHAIN_ID,
             srcDEX = router,
             srcPath = [wnative.address, transitToken.address],
-            nativeOut = false,
             nativeIn = null,
             integrator = INTEGRATOR
         } = {}
@@ -121,7 +117,6 @@ describe('RubicCrossChainV2', () => {
                 amountOutMinimum: DEFAULT_AMOUNT_OUT_MIN
             },
             '10000',
-            nativeOut,
             { value: nativeIn === null ? cryptoFee.add(ethers.utils.parseEther('0.01')) : nativeIn }
         );
     }
@@ -171,8 +166,7 @@ describe('RubicCrossChainV2', () => {
             },
             _receiver,
             _nonce,
-            dstChainId,
-            _nativeOut
+            dstChainId
         );
     }
 
@@ -206,8 +200,7 @@ describe('RubicCrossChainV2', () => {
                 deadline,
                 amountOutMinimum
             },
-            _nonce,
-            _nativeOut
+            _nonce
         );
     }
 
