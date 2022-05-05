@@ -9,16 +9,6 @@ contract TransferSwapV2 is SwapBase {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    // emitted when requested dstChainId == srcChainId, no bridging
-    event DirectSwapV2(
-        bytes32 id,
-        uint64 srcChainId,
-        uint256 amountIn,
-        address tokenIn,
-        uint256 amountOut,
-        address tokenOut
-    );
-
     event SwapRequestSentV2(bytes32 id, uint64 dstChainId, uint256 srcAmount, address srcToken);
 
     function transferWithSwapV2Native(
@@ -91,8 +81,8 @@ contract TransferSwapV2 is SwapBase {
         address _receiver,
         uint256 _amountIn,
         uint64 _dstChainId,
-        SwapInfoV2 memory _srcSwap,
-        SwapInfoDest memory _dstSwap,
+        SwapInfoV2 calldata _srcSwap,
+        SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
         bool _nativeOut,
         uint256 _fee
@@ -129,29 +119,13 @@ contract TransferSwapV2 is SwapBase {
         );
     }
 
-    function _directSendV2(
-        address _receiver,
-        uint256 _amountIn,
-        uint64 _chainId,
-        SwapInfoV2 memory _srcSwap,
-        uint64 _nonce,
-        address srcTokenOut,
-        uint256 srcAmtOut
-    ) private {
-        // no need to bridge, directly send the tokens to user
-        IERC20(srcTokenOut).safeTransfer(_receiver, srcAmtOut);
-        // use uint64 for chainid to be consistent with other components in the system
-        bytes32 id = keccak256(abi.encode(msg.sender, _chainId, _receiver, _nonce, _srcSwap));
-        emit DirectSwapV2(id, _chainId, _amountIn, _srcSwap.path[0], srcAmtOut, srcTokenOut);
-    }
-
     function _crossChainTransferWithSwapV2(
         address _receiver,
         uint256 _amountIn,
         uint64 _chainId,
         uint64 _dstChainId,
-        SwapInfoV2 memory _srcSwap,
-        SwapInfoDest memory _dstSwap,
+        SwapInfoV2 calldata _srcSwap,
+        SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
         uint64 _nonce,
         bool _nativeOut,

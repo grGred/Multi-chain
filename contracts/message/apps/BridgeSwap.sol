@@ -66,7 +66,7 @@ contract BridgeSwap is SwapBase {
         uint256 _amountIn,
         uint64 _dstChainId,
         address _srcBridgeToken,
-        SwapInfoDest memory _dstSwap,
+        SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
         bool _nativeOut,
         uint256 _fee

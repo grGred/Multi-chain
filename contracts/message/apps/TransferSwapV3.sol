@@ -9,15 +9,6 @@ contract TransferSwapV3 is SwapBase {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    event DirectSwapV3(
-        bytes32 id,
-        uint64 srcChainId,
-        uint256 amountIn,
-        address tokenIn,
-        uint256 amountOut,
-        address tokenOut
-    );
-
     event SwapRequestSentV3(bytes32 id, uint64 dstChainId, uint256 srcAmount, address srcToken);
 
     function transferWithSwapV3Native(
@@ -90,8 +81,8 @@ contract TransferSwapV3 is SwapBase {
         address _receiver,
         uint256 _amountIn,
         uint64 _dstChainId,
-        SwapInfoV3 memory _srcSwap,
-        SwapInfoDest memory _dstSwap,
+        SwapInfoV3 calldata _srcSwap,
+        SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
         bool _nativeOut,
         uint256 _fee
@@ -128,29 +119,13 @@ contract TransferSwapV3 is SwapBase {
         );
     }
 
-    function _directSendV3(
-        address _receiver,
-        uint256 _amountIn,
-        uint64 _chainId,
-        SwapInfoV3 memory _srcSwap,
-        uint64 _nonce,
-        address srcTokenOut,
-        uint256 srcAmtOut
-    ) private {
-        // no need to bridge, directly send the tokens to user
-        IERC20(srcTokenOut).safeTransfer(_receiver, srcAmtOut);
-        // use uint64 for chainid to be consistent with other components in the system
-        bytes32 id = keccak256(abi.encode(msg.sender, _chainId, _receiver, _nonce, _srcSwap));
-        emit DirectSwapV3(id, _chainId, _amountIn, address(_getFirstBytes20(_srcSwap.path)), srcAmtOut, srcTokenOut);
-    }
-
     function _crossChainTransferWithSwapV3(
         address _receiver,
         uint256 _amountIn,
         uint64 _chainId,
         uint64 _dstChainId,
-        SwapInfoV3 memory _srcSwap,
-        SwapInfoDest memory _dstSwap,
+        SwapInfoV3 calldata _srcSwap,
+        SwapInfoDest calldata _dstSwap,
         uint32 _maxBridgeSlippage,
         uint64 _nonce,
         bool _nativeOut,
