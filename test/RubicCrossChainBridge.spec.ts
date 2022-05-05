@@ -244,7 +244,7 @@ describe('RubicCrossChainBridge', () => {
         describe('#executeMessageWithTransfer', () => {
             beforeEach('setup for target executions', async () => {
                 // transfer 1000 USDC
-                await transitToken.transfer(swapMain.address, 1000000000);
+                await transitToken.transfer(swapMain.address, ethers.BigNumber.from('1000000000'));
             });
             describe('target bridge should emit correct event', async () => {
                 let nonce: BN;

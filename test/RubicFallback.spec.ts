@@ -31,6 +31,7 @@ describe('RubicFallback', () => {
     let transitToken: TestERC20;
     let swapMain: RubicRouterV2;
     let router: string;
+    let routerV3: string;
     let wnative: WETH9;
     let chainId: number;
 
@@ -67,6 +68,10 @@ describe('RubicFallback', () => {
             _nonce,
             dstChainId
         );
+    }
+
+    async function encodePath(tokens): Promise<string> {
+        return tokens[0] + '000bb8' + tokens[1].slice(2);
     }
 
     async function getID(
@@ -136,6 +141,29 @@ describe('RubicFallback', () => {
         );
     }
 
+    async function callExecuteMessageWithTransferRefund({
+        tokenIn = transitToken.address,
+        amountIn = DEFAULT_AMOUNT_IN_USDC,
+        message = '0x',
+        executor = EXECUTOR_ADDRESS
+    } = {}): Promise<ContractTransaction> {
+        await hre.network.provider.request({
+            method: 'hardhat_impersonateAccount',
+            params: [TEST_BUS]
+        });
+
+        const bus = await ethers.getSigner(TEST_BUS);
+
+        await network.provider.send('hardhat_setBalance', [
+            bus.address,
+            '0x152D02C7E14AF6800000' // 100000 eth
+        ]);
+
+        const _swapMain = swapMain.connect(bus);
+
+        return _swapMain.executeMessageWithTransferRefund(tokenIn, amountIn, message, executor);
+    }
+
     before('create fixture loader', async () => {
         [wallet, other] = await (ethers as any).getSigners();
         loadFixture = createFixtureLoader([wallet, other]);
@@ -143,7 +171,7 @@ describe('RubicFallback', () => {
     });
 
     beforeEach('deploy fixture', async () => {
-        ({ swapMain, swapToken, transitToken, wnative, router, testMessagesContract } =
+        ({ swapMain, swapToken, transitToken, wnative, router, routerV3, testMessagesContract } =
             await loadFixture(swapContractFixtureInFork));
     });
 
@@ -159,7 +187,7 @@ describe('RubicFallback', () => {
         describe('#executeMessageWithTransferFallback', () => {
             beforeEach('Setup for target executions', async () => {
                 // transfer 1000 USDC
-                await transitToken.transfer(swapMain.address, 1000000000);
+                await transitToken.transfer(swapMain.address, ethers.BigNumber.from('1000000000'));
             });
             describe('Fallback should emit correct event in dst chain', async () => {
                 let nonce: BN;
@@ -176,17 +204,19 @@ describe('RubicFallback', () => {
                     });
                 });
 
-                it('Should successfully send token with failed bridge', async () => {
-                    const ID = await getID(
-                        testMessagesContract,
-                        (await swapMain.nonce()).add('1'),
-                        {
-                            dex: ZERO_ADDRESS,
-                            version: 2,
-                            path: [transitToken.address],
-                            amountOutMinimum: ethers.BigNumber.from('0')
-                        }
-                    );
+                it('Should successfully fallback token with failed bridge', async () => {
+                    // const ID = await getID(
+                    //     testMessagesContract,
+                    //     (await swapMain.nonce()).add('1'),
+                    //     {
+                    //         dex: ZERO_ADDRESS,
+                    //         version: 2,
+                    //         path: [transitToken.address],
+                    //         amountOutMinimum: ethers.BigNumber.from('0')
+                    //     }
+                    // );
+
+                    const balanceBefore = await transitToken.balanceOf(wallet.address);
 
                     await expect(
                         await callExecuteMessageWithTransferFallback({
@@ -194,165 +224,139 @@ describe('RubicFallback', () => {
                         })
                     ).to.emit(swapMain, 'SwapRequestDone');
                     //.withArgs(ID, DEFAULT_AMOUNT_IN_USDC, '3');
+                    const balanceAfter = await transitToken.balanceOf(wallet.address);
+                    await expect(balanceBefore.add(DEFAULT_AMOUNT_IN_USDC)).to.be.eq(balanceAfter);
                 });
 
-                // it('should successfully bridge native with rubic fee', async () => {
-                //     await hre.network.provider.request({
-                //         method: 'hardhat_impersonateAccount',
-                //         params: [TEST_BUS]
-                //     });
-                //
-                //     const bus = await ethers.getSigner(TEST_BUS);
-                //
-                //     await network.provider.send('hardhat_setBalance', [
-                //         bus.address,
-                //         '0x152D02C7E14AF6800000' // 100000 eth
-                //     ]);
-                //     const abiCoder = ethers.utils.defaultAbiCoder;
-                //
-                //     const storageBalancePositionWeth = ethers.utils.keccak256(
-                //         abiCoder.encode(['address'], [bus.address]) +
-                //             abiCoder.encode(['uint256'], [3]).slice(2, 66)
-                //     );
-                //
-                //     await network.provider.send('hardhat_setStorageAt', [
-                //         wnative.address,
-                //         storageBalancePositionWeth,
-                //         abiCoder.encode(['uint256'], [ethers.utils.parseEther('100000')])
-                //     ]);
-                //
-                //     await wnative
-                //         .connect(bus)
-                //         .transfer(swapMain.address, ethers.utils.parseEther('1'));
-                //
-                //     const _swapMain = swapMain.connect(bus);
-                //
-                //     message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
-                //         dex: ZERO_ADDRESS,
-                //         version: 2, // bridge version
-                //         path: [wnative.address],
-                //         amountOutMinimum: ethers.BigNumber.from('0') // not used
-                //     });
-                //
-                //     let tokenBalanceBefore = await wnative.balanceOf(swapMain.address);
-                //     await expect(
-                //         _swapMain.executeMessageWithTransfer(
-                //             ethers.constants.AddressZero,
-                //             wnative.address,
-                //             ethers.BigNumber.from('1000000000000000000'), // 1 ether
-                //             DST_CHAIN_ID,
-                //             message,
-                //             EXECUTOR_ADDRESS
-                //         )
-                //     ).to.emit(swapMain, 'SwapRequestDone');
-                //     let tokenBalanceAfter = await wnative.balanceOf(swapMain.address);
-                //     // take only platform comission in transit token
-                //     const platformFee = await _swapMain.feeRubic();
-                //     await expect(Number(tokenBalanceAfter)).to.be.eq(
-                //         (Number(tokenBalanceBefore) * Number(platformFee)) / feeDecimals
-                //     );
-                // });
-                //
-                // it('should fail bridge with incorrect path', async () => {
-                //     await hre.network.provider.request({
-                //         method: 'hardhat_impersonateAccount',
-                //         params: [TEST_BUS]
-                //     });
-                //
-                //     const bus = await ethers.getSigner(TEST_BUS);
-                //
-                //     await network.provider.send('hardhat_setBalance', [
-                //         bus.address,
-                //         '0x152D02C7E14AF6800000' // 100000 eth
-                //     ]);
-                //
-                //     const _swapMain = swapMain.connect(bus);
-                //
-                //     message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
-                //         dex: ZERO_ADDRESS,
-                //         version: 2, // bridge version
-                //         path: [transitToken.address, wnative.address],
-                //         amountOutMinimum: ethers.BigNumber.from('0') // not used
-                //     });
-                //
-                //     await expect(
-                //         _swapMain.executeMessageWithTransfer(
-                //             ethers.constants.AddressZero,
-                //             transitToken.address,
-                //             ethers.BigNumber.from('1000000000'),
-                //             DST_CHAIN_ID,
-                //             message,
-                //             EXECUTOR_ADDRESS
-                //         )
-                //     ).to.be.revertedWith('dst bridge expected');
-                // });
-                //
-                // describe('target bridge should take integrator & rubic fee', async () => {
-                //     beforeEach('set integrator and rubic fee', async () => {
-                //         await swapMain.setIntegrator(INTEGRATOR, '3000'); // 0.3 %
-                //         await swapMain.setRubicShare(INTEGRATOR, '500000'); // 50 % of integrator fee, 0.15 in total
-                //
-                //         message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
-                //             dex: ZERO_ADDRESS,
-                //             version: 2, // bridge version
-                //             path: [transitToken.address],
-                //             amountOutMinimum: ethers.BigNumber.from('0') // not used
-                //         });
-                //     });
-                //
-                //     it('should successfully bridge transitToken with rubic & integrator fee', async () => {
-                //         await hre.network.provider.request({
-                //             method: 'hardhat_impersonateAccount',
-                //             params: [TEST_BUS]
-                //         });
-                //
-                //         const bus = await ethers.getSigner(TEST_BUS);
-                //
-                //         await network.provider.send('hardhat_setBalance', [
-                //             bus.address,
-                //             '0x152D02C7E14AF6800000' // 100000 eth
-                //         ]);
-                //
-                //         const _swapMain = swapMain.connect(bus);
-                //
-                //         let tokenBalanceBefore = await transitToken.balanceOf(swapMain.address);
-                //         await expect(
-                //             _swapMain.executeMessageWithTransfer(
-                //                 ethers.constants.AddressZero,
-                //                 transitToken.address,
-                //                 ethers.BigNumber.from('1000000000'),
-                //                 DST_CHAIN_ID,
-                //                 message,
-                //                 EXECUTOR_ADDRESS
-                //             )
-                //         ).to.emit(swapMain, 'SwapRequestDone');
-                //
-                //         const tokenBalanceAfter = await transitToken.balanceOf(swapMain.address);
-                //         const collectedFee1 = await swapMain.collectedFee(transitToken.address);
-                //         const integratorCollectedFee1 = await swapMain.integratorCollectedFee(
-                //             INTEGRATOR,
-                //             transitToken.address
-                //         );
-                //
-                //         const integratorFee =
-                //             Number(await _swapMain.integratorFee(INTEGRATOR)) / feeDecimals;
-                //         const platformFee =
-                //             (integratorFee * Number(await _swapMain.platformShare(INTEGRATOR))) /
-                //             feeDecimals;
-                //
-                //         await expect(Number(integratorCollectedFee1)).to.be.eq(
-                //             Number(tokenBalanceBefore) * (Number(integratorFee) - platformFee)
-                //         );
-                //         // take platform comission in transit token
-                //         await expect(Number(collectedFee1)).to.be.eq(
-                //             Number(tokenBalanceBefore) * Number(platformFee)
-                //         );
-                //
-                //         await expect(Number(tokenBalanceAfter)).to.be.eq(
-                //             Number(integratorFee) * Number(tokenBalanceBefore)
-                //         );
-                //             });
-                //         });
+                it('Should successfully fallback token with failed V3', async () => {
+                    nonce = (await swapMain.nonce()).add('1');
+
+                    const path = await encodePath([transitToken.address, swapToken.address]);
+
+                    message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
+                        dex: routerV3,
+                        version: 1,
+                        pathV3: path
+                    });
+
+                    const balanceBefore = await transitToken.balanceOf(wallet.address);
+
+                    await expect(
+                        await callExecuteMessageWithTransferFallback({
+                            message: message
+                        })
+                    ).to.emit(swapMain, 'SwapRequestDone');
+                    const balanceAfter = await transitToken.balanceOf(wallet.address);
+                    await expect(balanceBefore.add(DEFAULT_AMOUNT_IN_USDC)).to.be.eq(balanceAfter);
+                });
+
+                it('Should successfully fallback token with failed V2', async () => {
+                    nonce = (await swapMain.nonce()).add('1');
+
+                    message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
+                        dex: router,
+                        version: 0,
+                        path: [transitToken.address, swapToken.address]
+                    });
+                    const balanceBefore = await transitToken.balanceOf(wallet.address);
+                    await expect(
+                        await callExecuteMessageWithTransferFallback({
+                            message: message
+                        })
+                    ).to.emit(swapMain, 'SwapRequestDone');
+                    const balanceAfter = await transitToken.balanceOf(wallet.address);
+                    await expect(balanceBefore.add(DEFAULT_AMOUNT_IN_USDC)).to.be.eq(balanceAfter);
+                });
+            });
+
+            describe('#executeMessageWithTransferRefund', () => {
+                beforeEach('Setup for target executions', async () => {
+                    // transfer 1000 USDC
+                    await transitToken.transfer(swapMain.address, '1000000000');
+                });
+                describe('Refund should emit correct event in src chain', async () => {
+                    let nonce: BN;
+                    let message: string;
+
+                    it('Should successfully refund token with failed bridge', async () => {
+                        nonce = (await swapMain.nonce()).add('1');
+
+                        message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
+                            dex: ZERO_ADDRESS,
+                            version: 2,
+                            path: [transitToken.address],
+                            amountOutMinimum: ethers.BigNumber.from('0')
+                        });
+
+                        // const ID = await getID(
+                        //     testMessagesContract,
+                        //     (await swapMain.nonce()).add('1'),
+                        //     {
+                        //         dex: ZERO_ADDRESS,
+                        //         version: 2,
+                        //         path: [transitToken.address],
+                        //         amountOutMinimum: ethers.BigNumber.from('0')
+                        //     }
+                        // );
+
+                        const balanceBefore = await transitToken.balanceOf(wallet.address);
+
+                        await expect(
+                            await callExecuteMessageWithTransferRefund({
+                                message: message
+                            })
+                        ).to.emit(swapMain, 'SwapRequestDone');
+                        // .withArgs(ID, DEFAULT_AMOUNT_IN_USDC, '3');
+
+                        const balanceAfter = await transitToken.balanceOf(wallet.address);
+                        await expect(balanceBefore.add(DEFAULT_AMOUNT_IN_USDC)).to.be.eq(
+                            balanceAfter
+                        );
+                    });
+
+                    it('Should successfully refund token with failed V3', async () => {
+                        nonce = (await swapMain.nonce()).add('1');
+
+                        const path = await encodePath([transitToken.address, swapToken.address]);
+
+                        message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
+                            dex: routerV3,
+                            version: 1,
+                            pathV3: path
+                        });
+                        const balanceBefore = await transitToken.balanceOf(wallet.address);
+
+                        await expect(
+                            await callExecuteMessageWithTransferRefund({
+                                message: message
+                            })
+                        ).to.emit(swapMain, 'SwapRequestDone');
+                        const balanceAfter = await transitToken.balanceOf(wallet.address);
+                        await expect(balanceBefore.add(DEFAULT_AMOUNT_IN_USDC)).to.be.eq(
+                            balanceAfter
+                        );
+                    });
+
+                    it('Should successfully refund token with failed V2', async () => {
+                        nonce = (await swapMain.nonce()).add('1');
+
+                        message = await getMessage(testMessagesContract, nonce, DST_CHAIN_ID, {
+                            dex: router,
+                            version: 0,
+                            path: [transitToken.address, swapToken.address]
+                        });
+                        const balanceBefore = await transitToken.balanceOf(wallet.address);
+                        await expect(
+                            await callExecuteMessageWithTransferRefund({
+                                message: message
+                            })
+                        ).to.emit(swapMain, 'SwapRequestDone');
+                        const balanceAfter = await transitToken.balanceOf(wallet.address);
+                        await expect(balanceBefore.add(DEFAULT_AMOUNT_IN_USDC)).to.be.eq(
+                            balanceAfter
+                        );
+                    });
+                });
             });
         });
     });
