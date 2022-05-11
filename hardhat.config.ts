@@ -26,7 +26,7 @@ const DEFAULT_COMPILER_SETTINGS: SolcUserConfig = {
   settings: {
     optimizer: {
       enabled: true,
-      runs: 200,
+      runs: 500,
     },
     metadata: {
       bytecodeHash: 'none',
@@ -108,7 +108,7 @@ module.exports = {
   etherscan: {
     // Your API key for Etherscan
     // Obtain one at https://etherscan.io/
-    apiKey: `${FANTOMSCAN_API_KEY}`,
+    apiKey: `${ETHERSCAN_API_KEY}`,
   },
   solidity: {
     compilers: [DEFAULT_COMPILER_SETTINGS],

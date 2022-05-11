@@ -110,5 +110,3 @@ export const swapContractFixtureInFork: Fixture<SwapContractFixture> = async fun
         messageBus
     };
 };
-// TODO INCH native https://bscscan.com/tx/0xb3a49638198e267a6e62aa792a988dec4b5c9562a833787cd6d2902a1b3a8d28
-// TODO INCH tokens https://bscscan.com/tx/0x9fbfe67341b07346dc32e5bcc733080eb03738b51996d8df84ae9f3372b18211 tests

@@ -64,7 +64,7 @@ describe('RubicSettings', () => {
         expect(await swapMain.getSupportedDEXes()).to.deep.eq(routers);
     });
 
-    describe.only('#Contract utility tests', () => {
+    describe('#Contract utility tests', () => {
         describe('#sweepTokens', () => {
             beforeEach('Setup for target executions', async () => {
                 // transfer 1000 USDC
