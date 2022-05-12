@@ -33,7 +33,10 @@ async function main() {
   // USDC token address:
   // SUSHI: 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506
 
-  // const CrossChainSwapDeploy = await CrossChainSwap.deploy('0x265B25e22bcd7f10a5bD6E6410F10537Cc7567e8', '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506', '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270');
+  // const CrossChainSwapDeploy = await CrossChainSwap.deploy(
+  //     '0x265B25e22bcd7f10a5bD6E6410F10537Cc7567e8',
+  //     '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506',
+  //     '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270');
 
   // BNB TEST 97
   // MessageBus 0xAd204986D6cB67A5Bc76a3CB8974823F43Cb9AAA
@@ -41,7 +44,11 @@ async function main() {
   // USDC token address in BSC: 0x9744ae566c64B6B6f7F9A4dD50f7496Df6Fef990
   // SUSHI: 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506
 
-  // const CrossChainSwapDeploy = await CrossChainSwap.deploy('0xAd204986D6cB67A5Bc76a3CB8974823F43Cb9AAA', '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506', '0xCe7F7c709E8c74D8ad069Ed28abF25ddC43b32a9');
+  const CrossChainSwapDeploy = await CrossChainSwap.deploy(
+      '0xAd204986D6cB67A5Bc76a3CB8974823F43Cb9AAA',
+      ['0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506'],
+      '0x094616F0BdFB0b526bD735Bf66Eca0Ad254ca81F'
+  );
 
   // GOERLI TEST 5
   // MessageBus 0x942E8e0e4b021F55b89660c886146e0Ec57F4b5B
@@ -69,9 +76,9 @@ async function main() {
   await hre.run("verify:verify", {
     address: CrossChainSwapDeploy.address,
     constructorArguments: [
-      '0x223fB0CeB2C6e5310264EFe38151d7D083db91f1',
-      '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506',
-      '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c' // BSC
+        '0xAd204986D6cB67A5Bc76a3CB8974823F43Cb9AAA',
+      ['0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506'],
+      '0x094616F0BdFB0b526bD735Bf66Eca0Ad254ca81F'
     ],
   });
 }

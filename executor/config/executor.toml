@@ -18,8 +18,8 @@ gateway_grpc = "35.165.81.166:20000"
 
 [eth]
 # Fully qualified absolute path only, "~" would not work
-signer_keystore = "/home/grgred/.ethereum/keystore/UTC--2022-03-04T13-14-25.518462100Z--e56d03125836bebd58f7db772efd721da79575c5"
-signer_passphrase = "1111"
+signer_keystore = ""
+signer_passphrase = ""
 
 [db]
 url = "localhost:26257"
